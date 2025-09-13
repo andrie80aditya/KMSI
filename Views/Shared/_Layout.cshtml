@@ -1,0 +1,706 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - KMSI Apps</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --secondary-color: #64748b;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #d97706;
+            --info-color: #0891b2;
+            --light-bg: #f8fafc;
+            --white: #ffffff;
+            --gray-50: #f9fafb;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 70px;
+            --header-height: 70px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --border-radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--light-bg);
+            line-height: 1.6;
+            color: var(--gray-800);
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-800) 100%);
+            color: white;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gray-600) transparent;
+        }
+
+            .sidebar::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .sidebar::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .sidebar::-webkit-scrollbar-thumb {
+                background-color: var(--gray-600);
+                border-radius: 3px;
+            }
+
+            .sidebar.collapsed {
+                width: var(--sidebar-collapsed-width);
+            }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-logo {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+        }
+
+        .sidebar-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            white-space: nowrap;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .sidebar-title {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .nav-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-group-title {
+            padding: 0 1.5rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--gray-400);
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .nav-group-title {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: var(--gray-300);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+            .nav-link:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+                border-left-color: var(--primary-color);
+            }
+
+            .nav-link.active {
+                background-color: var(--primary-color);
+                color: white;
+                border-left-color: white;
+            }
+
+        .nav-icon {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .nav-text {
+            font-weight: 500;
+            white-space: nowrap;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .nav-text {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background-color: var(--danger-color);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+
+            .main-wrapper.sidebar-collapsed {
+                margin-left: var(--sidebar-collapsed-width);
+            }
+
+        .header {
+            background: white;
+            height: var(--header-height);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: var(--gray-600);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+            .sidebar-toggle:hover {
+                background-color: var(--gray-100);
+                color: var(--gray-800);
+            }
+
+        .breadcrumb {
+            background: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .breadcrumb-item {
+            color: var(--gray-600);
+        }
+
+            .breadcrumb-item.active {
+                color: var(--gray-800);
+                font-weight: 500;
+            }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-menu-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+            .user-menu-toggle:hover {
+                background-color: var(--gray-100);
+            }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-info {
+            text-align: left;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--gray-800);
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .content {
+            padding: 2rem;
+            min-height: calc(100vh - var(--header-height));
+        }
+
+        /* Cards and Components */
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s ease;
+        }
+
+            .card:hover {
+                box-shadow: var(--shadow-md);
+            }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Responsive Design */
+        @@media (max-width: 768px) {
+            .sidebar
+
+        {
+            transform: translateX(-100%);
+        }
+
+        .sidebar.mobile-open {
+            transform: translateX(0);
+        }
+
+        .main-wrapper {
+            margin-left: 0;
+        }
+
+        .header {
+            padding: 0 1rem;
+        }
+
+        .content {
+            padding: 1rem;
+        }
+
+        .user-info {
+            display: none;
+        }
+
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        @@media (max-width: 768px) {
+            .sidebar-overlay.active
+
+        {
+            display: block;
+        }
+
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <i class="fas fa-music"></i>
+            </div>
+            <div class="sidebar-title">KMSI Apps</div>
+        </div>
+
+        <div class="sidebar-nav">
+            <!-- Dashboard -->
+            <div class="nav-group">
+                <div class="nav-group-title">Main</div>
+                <div class="nav-item">
+                    <a href="/Dashboard" class="nav-link">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Master Data -->
+            <div class="nav-group">
+                <div class="nav-group-title">Master Data</div>
+                <div class="nav-item">
+                    <a href="/Company" class="nav-link">
+                        <i class="nav-icon fas fa-building"></i>
+                        <span class="nav-text">Companies</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Site" class="nav-link">
+                        <i class="nav-icon fas fa-map-marker-alt"></i>
+                        <span class="nav-text">Sites</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/User" class="nav-link">
+                        <i class="nav-icon fas fa-users"></i>
+                        <span class="nav-text">Users</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Teacher" class="nav-link">
+                        <i class="nav-icon fas fa-chalkboard-teacher"></i>
+                        <span class="nav-text">Teachers</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Student" class="nav-link">
+                        <i class="nav-icon fas fa-user-graduate"></i>
+                        <span class="nav-text">Students</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Grade" class="nav-link">
+                        <i class="nav-icon fas fa-layer-group"></i>
+                        <span class="nav-text">Grades</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Book" class="nav-link">
+                        <i class="nav-icon fas fa-book"></i>
+                        <span class="nav-text">Books</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Academic -->
+            <div class="nav-group">
+                <div class="nav-group-title">Academic</div>
+                <div class="nav-item">
+                    <a href="/Registration" class="nav-link">
+                        <i class="nav-icon fas fa-user-plus"></i>
+                        <span class="nav-text">Registration</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Schedule" class="nav-link">
+                        <i class="nav-icon fas fa-calendar-alt"></i>
+                        <span class="nav-text">Scheduling</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Attendance" class="nav-link">
+                        <i class="nav-icon fas fa-clipboard-check"></i>
+                        <span class="nav-text">Attendance</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Examination" class="nav-link">
+                        <i class="nav-icon fas fa-file-alt"></i>
+                        <span class="nav-text">Examinations</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Certificate" class="nav-link">
+                        <i class="nav-icon fas fa-certificate"></i>
+                        <span class="nav-text">Certificates</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Finance -->
+            <div class="nav-group">
+                <div class="nav-group-title">Finance</div>
+                <div class="nav-item">
+                    <a href="/Billing" class="nav-link">
+                        <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                        <span class="nav-text">Student Billing</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Payroll" class="nav-link">
+                        <i class="nav-icon fas fa-money-check-alt"></i>
+                        <span class="nav-text">Teacher Payroll</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/BillingPeriod" class="nav-link">
+                        <i class="nav-icon fas fa-calendar-week"></i>
+                        <span class="nav-text">Billing Periods</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Inventory -->
+            <div class="nav-group">
+                <div class="nav-group-title">Inventory</div>
+                <div class="nav-item">
+                    <a href="/Inventory" class="nav-link">
+                        <i class="nav-icon fas fa-boxes"></i>
+                        <span class="nav-text">Stock Management</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/BookRequisition" class="nav-link">
+                        <i class="nav-icon fas fa-shopping-cart"></i>
+                        <span class="nav-text">Book Requisition</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/StockMovement" class="nav-link">
+                        <i class="nav-icon fas fa-exchange-alt"></i>
+                        <span class="nav-text">Stock Movement</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Reports -->
+            <div class="nav-group">
+                <div class="nav-group-title">Reports</div>
+                <div class="nav-item">
+                    <a href="/Reports/Students" class="nav-link">
+                        <i class="nav-icon fas fa-chart-bar"></i>
+                        <span class="nav-text">Student Reports</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Reports/Financial" class="nav-link">
+                        <i class="nav-icon fas fa-chart-line"></i>
+                        <span class="nav-text">Financial Reports</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/Reports/Attendance" class="nav-link">
+                        <i class="nav-icon fas fa-chart-pie"></i>
+                        <span class="nav-text">Attendance Reports</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- System -->
+            <div class="nav-group">
+                <div class="nav-group-title">System</div>
+                <div class="nav-item">
+                    <a href="/Settings" class="nav-link">
+                        <i class="nav-icon fas fa-cog"></i>
+                        <span class="nav-text">Settings</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/EmailTemplate" class="nav-link">
+                        <i class="nav-icon fas fa-envelope"></i>
+                        <span class="nav-text">Email Templates</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="/AuditLog" class="nav-link">
+                        <i class="nav-icon fas fa-history"></i>
+                        <span class="nav-text">Audit Logs</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper" id="mainWrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/Dashboard">Home</a></li>
+                        @if (ViewData["Breadcrumb"] != null)
+                        {
+                            <li class="breadcrumb-item active">@ViewData["Breadcrumb"]</li>
+                        }
+                    </ol>
+                </nav>
+            </div>
+
+            <div class="header-right">
+                <div class="user-menu dropdown">
+                    <button class="user-menu-toggle" type="button" data-bs-toggle="dropdown">
+                        <div class="user-avatar">
+                            @(User.FindFirst("FullName")?.Value?.Split(' ').FirstOrDefault()?.Substring(0, 1) ?? "U")
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">@User.FindFirst("FullName")?.Value</div>
+                            <div class="user-role">@User.FindFirst("UserLevelName")?.Value</div>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/Profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="/Settings"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="post" action="/Account/Logout" class="d-inline">
+                                <button type="submit" class="dropdown-item"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="content">
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const mainWrapper = document.getElementById('mainWrapper');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+            // Sidebar toggle functionality
+            sidebarToggle.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    // Mobile behavior
+                    sidebar.classList.toggle('mobile-open');
+                    sidebarOverlay.classList.toggle('active');
+                } else {
+                    // Desktop behavior
+                    sidebar.classList.toggle('collapsed');
+                    mainWrapper.classList.toggle('sidebar-collapsed');
+                }
+            });
+
+            // Close sidebar when clicking overlay (mobile)
+            sidebarOverlay.addEventListener('click', function() {
+                sidebar.classList.remove('mobile-open');
+                sidebarOverlay.classList.remove('active');
+            });
+
+            // Set active nav link
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Handle responsive sidebar
+            function handleResize() {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('mobile-open');
+                    sidebarOverlay.classList.remove('active');
+                }
+            }
+
+            window.addEventListener('resize', handleResize);
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
