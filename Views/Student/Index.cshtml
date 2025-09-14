@@ -1,0 +1,747 @@
+﻿@model IEnumerable<KMSI.Models.Student>
+@{
+    ViewData["Title"] = "Student Management";
+    ViewData["Breadcrumb"] = "Student Management";
+}
+
+<div class="student-management">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Student Management</h1>
+            <p class="text-muted">Manage students and their profiles</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="openStudentModal()">
+            <i class="fas fa-plus me-2"></i>Add New Student
+        </button>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="filterStatus" class="form-label mb-1">Filter by Status</label>
+                    <select class="form-select form-select-sm" id="filterStatus">
+                        <option value="">All Status</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Active">Active</option>
+                        <option value="Trial">Trial</option>
+                        <option value="Graduated">Graduated</option>
+                        <option value="Withdrawn">Withdrawn</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filterGrade" class="form-label mb-1">Filter by Grade</label>
+                    <select class="form-select form-select-sm" id="filterGrade">
+                        <option value="">All Grades</option>
+                        @foreach (var grade in ViewBag.Grades)
+                        {
+                            <option value="@grade.GradeId">@grade.GradeName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="searchStudents" class="form-label mb-1">Search Students</label>
+                    <input type="text" class="form-control form-control-sm" id="searchStudents" placeholder="Search by name, code, or parent...">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="clearFilters()">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">Students List</h5>
+                </div>
+                <div class="col-auto">
+                    <span class="text-muted" id="studentCount">@Model.Count() students</span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="studentsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student</th>
+                            <th>Code</th>
+                            <th>Site</th>
+                            <th>Grade</th>
+                            <th>Teacher</th>
+                            <th>Parent</th>
+                            <th>Registration</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var student in Model)
+                        {
+                            <tr data-status="@student.Status" data-grade="@(student.CurrentGradeId?.ToString() ?? "")">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="student-avatar me-3">
+                                            @student.FirstName.Substring(0, 1)@student.LastName.Substring(0, 1)
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@student.FirstName @student.LastName</div>
+                                            <small class="text-muted">@student.StudentCode</small>
+                                            @if (!string.IsNullOrEmpty(student.Phone))
+                                            {
+                                                <div class="mt-1">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-phone fa-sm me-1"></i>@student.Phone
+                                                    </small>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">@student.StudentCode</span>
+                                </td>
+                                <td>@student.Site?.SiteName</td>
+                                <td>
+                                    @if (student.CurrentGrade != null)
+                                    {
+                                        <span class="badge bg-info">@student.CurrentGrade.GradeName</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (student.AssignedTeacher?.User != null)
+                                    {
+                                        <div>
+                                            <div class="fw-medium">@student.AssignedTeacher.User.FirstName @student.AssignedTeacher.User.LastName</div>
+                                            <small class="text-muted">@student.AssignedTeacher.TeacherCode</small>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not assigned</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(student.ParentName))
+                                    {
+                                        <div>
+                                            <div class="fw-medium">@student.ParentName</div>
+                                            @if (!string.IsNullOrEmpty(student.ParentPhone))
+                                            {
+                                                <small class="text-muted">@student.ParentPhone</small>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="registration-date">@student.RegistrationDate.ToString("dd/MM/yyyy")</span>
+                                </td>
+                                <td>
+                                    @switch (student.Status)
+                                    {
+                                        case "Active":
+                                            <span class="badge bg-success">Active</span>
+                                            break;
+                                        case "Trial":
+                                            <span class="badge bg-warning">Trial</span>
+                                            break;
+                                        case "Pending":
+                                            <span class="badge bg-secondary">Pending</span>
+                                            break;
+                                        case "Graduated":
+                                            <span class="badge bg-primary">Graduated</span>
+                                            break;
+                                        case "Withdrawn":
+                                            <span class="badge bg-danger">Withdrawn</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-light text-dark">@student.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary" onclick="editStudent(@student.StudentId)">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" onclick="deleteStudent(@student.StudentId, '@student.FirstName @student.LastName')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Modal -->
+<div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add New Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="studentForm">
+                <div class="modal-body">
+                    <input type="hidden" id="studentId" name="studentId" value="0">
+
+                    <div class="row g-3">
+                        <!-- Personal Information -->
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-user me-2"></i>Personal Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="firstName" class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="firstName" name="firstName" maxlength="50" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="lastName" class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="lastName" name="lastName" maxlength="50" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="gender" class="form-label">Gender</label>
+                            <select class="form-select" id="gender" name="gender">
+                                <option value="">Select Gender</option>
+                                <option value="M">Male</option>
+                                <option value="F">Female</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="phone" name="phone" maxlength="20">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" maxlength="100">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="city" name="city" maxlength="50">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="2" maxlength="500"></textarea>
+                        </div>
+
+                        <!-- Parent Information -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-users me-2"></i>Parent Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="parentName" class="form-label">Parent Name</label>
+                            <input type="text" class="form-control" id="parentName" name="parentName" maxlength="100">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="parentPhone" class="form-label">Parent Phone</label>
+                            <input type="text" class="form-control" id="parentPhone" name="parentPhone" maxlength="20">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="parentEmail" class="form-label">Parent Email</label>
+                            <input type="email" class="form-control" id="parentEmail" name="parentEmail" maxlength="100">
+                        </div>
+
+                        <!-- Assignment Information -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-building me-2"></i>Assignment Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="companyId" class="form-label">Company <span class="text-danger">*</span></label>
+                            <select class="form-select" id="companyId" name="companyId" required onchange="loadSites(); loadGrades();">
+                                <option value="">Select Company</option>
+                                @foreach (var company in ViewBag.Companies)
+                                {
+                                    <option value="@company.CompanyId">@company.CompanyName</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="siteId" class="form-label">Site <span class="text-danger">*</span></label>
+                            <select class="form-select" id="siteId" name="siteId" required onchange="loadTeachers(); generateStudentCode();">
+                                <option value="">Select Site</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="studentCode" class="form-label">Student Code <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="text" class="form-control text-uppercase" id="studentCode" name="studentCode" maxlength="20" required readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="generateStudentCode()" title="Generate Code">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="registrationDate" class="form-label">Registration Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="registrationDate" name="registrationDate" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="Pending">Pending</option>
+                                <option value="Trial">Trial</option>
+                                <option value="Active">Active</option>
+                                <option value="Graduated">Graduated</option>
+                                <option value="Withdrawn">Withdrawn</option>
+                            </select>
+                        </div>
+
+                        <!-- Academic Information -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-graduation-cap me-2"></i>Academic Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="currentGradeId" class="form-label">Current Grade</label>
+                            <select class="form-select" id="currentGradeId" name="currentGradeId">
+                                <option value="">Select Grade (Optional)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="assignedTeacherId" class="form-label">Assigned Teacher</label>
+                            <select class="form-select" id="assignedTeacherId" name="assignedTeacherId">
+                                <option value="">Select Teacher (Optional)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" maxlength="1000"></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-3">
+                                <input class="form-check-input" type="checkbox" id="isActive" name="isActive" checked>
+                                <label class="form-check-label" for="isActive">
+                                    Active Student
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Student
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .student-avatar {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .registration-date {
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.375rem 0.75rem;
+    }
+
+    .modal-header {
+        background: var(--light-bg);
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .text-primary {
+        color: var(--primary-color) !important;
+    }
+
+    .text-uppercase {
+        text-transform: uppercase;
+    }
+
+    @@media (max-width: 768px) {
+        .table-responsive
+    {
+        font-size: 0.875rem;
+    }
+
+    .student-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.25rem 0.5rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    }
+</style>
+
+<script>
+    let isEditMode = false;
+
+    function openStudentModal(studentId = null) {
+        isEditMode = !!studentId;
+        const modal = new bootstrap.Modal(document.getElementById('studentModal'));
+
+        if (isEditMode) {
+            document.getElementById('modalTitle').textContent = 'Edit Student';
+            loadStudentData(studentId);
+        } else {
+            document.getElementById('modalTitle').textContent = 'Add New Student';
+            document.getElementById('studentForm').reset();
+            document.getElementById('studentId').value = '0';
+            document.getElementById('registrationDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('status').value = 'Pending';
+            document.getElementById('isActive').checked = true;
+        }
+
+        modal.show();
+    }
+
+    function editStudent(studentId) {
+        openStudentModal(studentId);
+    }
+
+    async function loadStudentData(studentId) {
+        try {
+            const response = await fetch('@Url.Action("GetStudent", "Student")?id=' + studentId);
+            const student = await response.json();
+
+            document.getElementById('studentId').value = student.studentId;
+            document.getElementById('companyId').value = student.companyId;
+            document.getElementById('studentCode').value = student.studentCode;
+            document.getElementById('firstName').value = student.firstName;
+            document.getElementById('lastName').value = student.lastName;
+            document.getElementById('dateOfBirth').value = student.dateOfBirth || '';
+            document.getElementById('gender').value = student.gender || '';
+            document.getElementById('phone').value = student.phone || '';
+            document.getElementById('email').value = student.email || '';
+            document.getElementById('address').value = student.address || '';
+            document.getElementById('city').value = student.city || '';
+            document.getElementById('parentName').value = student.parentName || '';
+            document.getElementById('parentPhone').value = student.parentPhone || '';
+            document.getElementById('parentEmail').value = student.parentEmail || '';
+            document.getElementById('registrationDate').value = student.registrationDate;
+            document.getElementById('status').value = student.status;
+            document.getElementById('notes').value = student.notes || '';
+            document.getElementById('isActive').checked = student.isActive;
+
+            // Load dependent dropdowns
+            await loadSites();
+            document.getElementById('siteId').value = student.siteId;
+
+            await loadGrades();
+            document.getElementById('currentGradeId').value = student.currentGradeId || '';
+
+            await loadTeachers();
+            document.getElementById('assignedTeacherId').value = student.assignedTeacherId || '';
+        } catch (error) {
+            console.error('Error loading student:', error);
+            showAlert('Error loading student data', 'error');
+        }
+    }
+
+    async function loadSites() {
+        const companyId = document.getElementById('companyId').value;
+        const siteSelect = document.getElementById('siteId');
+
+        siteSelect.innerHTML = '<option value="">Select Site</option>';
+
+        if (companyId) {
+            try {
+                const response = await fetch('@Url.Action("GetSitesByCompany", "Student")?companyId=' + companyId);
+                const sites = await response.json();
+
+                sites.forEach(site => {
+                    const option = document.createElement('option');
+                    option.value = site.value;
+                    option.textContent = site.text;
+                    siteSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading sites:', error);
+            }
+        }
+    }
+
+    async function loadGrades() {
+        const companyId = document.getElementById('companyId').value;
+        const gradeSelect = document.getElementById('currentGradeId');
+
+        gradeSelect.innerHTML = '<option value="">Select Grade (Optional)</option>';
+
+        if (companyId) {
+            try {
+                const response = await fetch('@Url.Action("GetGradesByCompany", "Student")?companyId=' + companyId);
+                const grades = await response.json();
+
+                grades.forEach(grade => {
+                    const option = document.createElement('option');
+                    option.value = grade.value;
+                    option.textContent = grade.text;
+                    gradeSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading grades:', error);
+            }
+        }
+    }
+
+    async function loadTeachers() {
+        const siteId = document.getElementById('siteId').value;
+        const teacherSelect = document.getElementById('assignedTeacherId');
+
+        teacherSelect.innerHTML = '<option value="">Select Teacher (Optional)</option>';
+
+        if (siteId) {
+            try {
+                const response = await fetch('@Url.Action("GetTeachersBySite", "Student")?siteId=' + siteId);
+                const teachers = await response.json();
+
+                teachers.forEach(teacher => {
+                    const option = document.createElement('option');
+                    option.value = teacher.value;
+                    option.textContent = teacher.text;
+                    teacherSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading teachers:', error);
+            }
+        }
+    }
+
+    async function generateStudentCode() {
+        const companyId = document.getElementById('companyId').value;
+        const siteId = document.getElementById('siteId').value;
+
+        if (!companyId || !siteId) {
+            showAlert('Please select Company and Site first', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('@Url.Action("GenerateStudentCode", "Student")?companyId=' + companyId + '&siteId=' + siteId);
+            const result = await response.json();
+
+            if (result.success) {
+                document.getElementById('studentCode').value = result.studentCode;
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error generating student code:', error);
+            showAlert('Error generating student code', 'error');
+        }
+    }
+
+    document.getElementById('studentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        // Add the checkbox value explicitly since FormData doesn't handle unchecked checkboxes
+        formData.set('isActive', document.getElementById('isActive').checked);
+
+        const url = isEditMode ? '@Url.Action("Update", "Student")' : '@Url.Action("Create", "Student")';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(result.message, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error saving student:', error);
+            showAlert('Error saving student', 'error');
+        }
+    });
+
+    async function deleteStudent(studentId, studentName) {
+        if (confirm(`Are you sure you want to delete student "${studentName}"?`)) {
+            try {
+                const response = await fetch('@Url.Action("Delete", "Student")?id=' + studentId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting student:', error);
+                showAlert('Error deleting student', 'error');
+            }
+        }
+    }
+
+    // Filter and search functionality
+    function filterStudents() {
+        const statusFilter = document.getElementById('filterStatus').value.toLowerCase();
+        const gradeFilter = document.getElementById('filterGrade').value.toLowerCase();
+        const searchTerm = document.getElementById('searchStudents').value.toLowerCase();
+        const rows = document.querySelectorAll('#studentsTable tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const status = row.getAttribute('data-status').toLowerCase();
+            const grade = row.getAttribute('data-grade').toLowerCase();
+            const text = row.textContent.toLowerCase();
+
+            const statusMatch = !statusFilter || status === statusFilter;
+            const gradeMatch = !gradeFilter || grade === gradeFilter;
+            const textMatch = !searchTerm || text.includes(searchTerm);
+
+            if (statusMatch && gradeMatch && textMatch) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        document.getElementById('studentCount').textContent = `${visibleCount} students`;
+    }
+
+    function clearFilters() {
+        document.getElementById('filterStatus').value = '';
+        document.getElementById('filterGrade').value = '';
+        document.getElementById('searchStudents').value = '';
+        filterStudents();
+    }
+
+    // Event listeners
+    document.getElementById('filterStatus').addEventListener('change', filterStudents);
+    document.getElementById('filterGrade').addEventListener('change', filterStudents);
+    document.getElementById('searchStudents').addEventListener('input', filterStudents);
+
+    // Student code uppercase transformation
+    document.getElementById('studentCode').addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase();
+    });
+
+    function showAlert(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    // Initialize filters on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set initial student count
+        const totalStudents = document.querySelectorAll('#studentsTable tbody tr').length;
+        document.getElementById('studentCount').textContent = `${totalStudents} students`;
+    });
+</script>

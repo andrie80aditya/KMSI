@@ -1,0 +1,789 @@
+﻿@model IEnumerable<KMSI.Models.Attendance>
+@{
+    ViewData["Title"] = "Attendance Management";
+    ViewData["Breadcrumb"] = "Attendance Management";
+}
+
+<div class="attendance-management">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Attendance Management</h1>
+            <p class="text-muted">Record and manage student attendance</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="openAttendanceModal()">
+            <i class="fas fa-plus me-2"></i>Record Attendance
+        </button>
+    </div>
+
+    <!-- Quick Actions - Scheduled Classes -->
+    @if (ViewBag.ScheduledClasses != null && ((IEnumerable<KMSI.Models.ClassSchedule>)ViewBag.ScheduledClasses).Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex align-items-center">
+                    <h5 class="mb-0 me-2">
+                        <i class="fas fa-clock text-warning me-2"></i>Scheduled Classes
+                    </h5>
+                    <span class="badge bg-warning text-dark">
+                        @(((IEnumerable<KMSI.Models.ClassSchedule>)ViewBag.ScheduledClasses).Count()) Pending
+                    </span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Student</th>
+                                <th>Teacher</th>
+                                <th>Grade</th>
+                                <th>Site</th>
+                                <th class="text-end">Quick Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var schedule in (IEnumerable<KMSI.Models.ClassSchedule>)ViewBag.ScheduledClasses)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="fw-semibold">@schedule.ScheduleDate.ToString("dd/MM/yyyy")</span>
+                                        <br><small class="text-muted">@schedule.ScheduleDate.ToString("dddd")</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">
+                                            @schedule.StartTime.ToString(@"HH\:mm") - @schedule.EndTime.ToString(@"HH\:mm")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <div class="fw-semibold">@schedule.Student?.FirstName @schedule.Student?.LastName</div>
+                                            <small class="text-muted">@schedule.Student?.StudentCode</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <div>@schedule.Teacher?.User?.FirstName @schedule.Teacher?.User?.LastName</div>
+                                            <small class="text-muted">@schedule.Teacher?.TeacherCode</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">@schedule.Grade?.GradeName</span>
+                                    </td>
+                                    <td>@schedule.Site?.SiteName</td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-success"
+                                                    onclick="quickAttendance(@schedule.ClassScheduleId, 'Present')"
+                                                    title="Mark Present">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-warning"
+                                                    onclick="quickAttendance(@schedule.ClassScheduleId, 'Late')"
+                                                    title="Mark Late">
+                                                <i class="fas fa-clock"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-danger"
+                                                    onclick="quickAttendance(@schedule.ClassScheduleId, 'Absent')"
+                                                    title="Mark Absent">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary"
+                                                    onclick="recordDetailedAttendance(@schedule.ClassScheduleId)"
+                                                    title="Detailed Record">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Attendance Records -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">Attendance Records</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex gap-2 align-items-center">
+                        <select id="statusFilter" class="form-select form-select-sm" onchange="filterAttendance()">
+                            <option value="">All Status</option>
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                            <option value="Late">Late</option>
+                            <option value="Excused">Excused</option>
+                        </select>
+                        <div class="input-group input-group-sm" style="width: 250px;">
+                            <input type="text" class="form-control" id="searchAttendance" placeholder="Search records...">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="attendanceTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Student</th>
+                            <th>Teacher</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Lesson Topic</th>
+                            <th>Score</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var attendance in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div>
+                                        <div class="fw-semibold">@attendance.AttendanceDate.ToString("dd/MM/yyyy")</div>
+                                        <small class="text-muted">@attendance.AttendanceDate.ToString("dddd")</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="student-avatar me-2">
+                                            @attendance.Student?.FirstName?.Substring(0, 1)@attendance.Student?.LastName?.Substring(0, 1)
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@attendance.Student?.FirstName @attendance.Student?.LastName</div>
+                                            <small class="text-muted">@attendance.Student?.StudentCode</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div>@attendance.Teacher?.User?.FirstName @attendance.Teacher?.User?.LastName</div>
+                                        <small class="text-muted">@attendance.ClassSchedule?.Site?.SiteName</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (attendance.ActualStartTime.HasValue && attendance.ActualEndTime.HasValue)
+                                    {
+                                        <span class="badge bg-light text-dark">
+                                            @attendance.ActualStartTime.Value.ToString(@"HH\:mm") - @attendance.ActualEndTime.Value.ToString(@"HH\:mm")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @switch (attendance.Status)
+                                    {
+                                        case "Present":
+                                            <span class="badge bg-success">Present</span>
+                                            break;
+                                        case "Absent":
+                                            <span class="badge bg-danger">Absent</span>
+                                            break;
+                                        case "Late":
+                                            <span class="badge bg-warning text-dark">Late</span>
+                                            break;
+                                        case "Excused":
+                                            <span class="badge bg-info">Excused</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary">@attendance.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(attendance.LessonTopic))
+                                    {
+                                        <div class="lesson-topic" title="@attendance.LessonTopic">
+                                            @(attendance.LessonTopic.Length > 30 ? attendance.LessonTopic.Substring(0, 30) + "..." : attendance.LessonTopic)
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (attendance.StudentPerformanceScore.HasValue)
+                                    {
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-1">@attendance.StudentPerformanceScore</span>
+                                            <div class="progress" style="width: 50px; height: 6px;">
+                                                <div class="progress-bar @(attendance.StudentPerformanceScore >= 80 ? "bg-success" : attendance.StudentPerformanceScore >= 60 ? "bg-warning" : "bg-danger")"
+                                                     style="width: @attendance.StudentPerformanceScore%"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-info"
+                                                onclick="viewAttendanceDetails(@attendance.AttendanceId)"
+                                                title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary"
+                                                onclick="editAttendance(@attendance.AttendanceId)"
+                                                title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger"
+                                                onclick="deleteAttendance(@attendance.AttendanceId, '@attendance.Student?.FirstName @attendance.Student?.LastName', '@attendance.AttendanceDate.ToString("dd/MM/yyyy")')"
+                                                title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Modal -->
+<div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Record Attendance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="attendanceForm">
+                <div class="modal-body">
+                    <input type="hidden" id="attendanceId" name="attendanceId" value="0">
+                    <input type="hidden" id="classScheduleId" name="classScheduleId">
+                    <input type="hidden" id="studentId" name="studentId">
+                    <input type="hidden" id="teacherId" name="teacherId">
+
+                    <div class="row g-3">
+                        <!-- Schedule Information -->
+                        <div class="col-12">
+                            <div class="alert alert-light border" id="scheduleInfo" style="display: none;">
+                                <h6 class="text-primary mb-2">
+                                    <i class="fas fa-calendar-alt me-2"></i>Schedule Information
+                                </h6>
+                                <div id="scheduleDetails"></div>
+                            </div>
+                        </div>
+
+                        <!-- Basic Attendance Information -->
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-clipboard-check me-2"></i>Attendance Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="attendanceDate" class="form-label">Attendance Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="attendanceDate" name="attendanceDate" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                            <select class="form-select" id="status" name="status" required onchange="toggleTimeFields()">
+                                <option value="">Select Status</option>
+                                <option value="Present">Present</option>
+                                <option value="Absent">Absent</option>
+                                <option value="Late">Late</option>
+                                <option value="Excused">Excused</option>
+                            </select>
+                        </div>
+
+                        <!-- Time Fields -->
+                        <div class="col-md-6" id="startTimeField">
+                            <label for="actualStartTime" class="form-label">Start Time</label>
+                            <input type="time" class="form-control" id="actualStartTime" name="actualStartTime">
+                        </div>
+
+                        <div class="col-md-6" id="endTimeField">
+                            <label for="actualEndTime" class="form-label">End Time</label>
+                            <input type="time" class="form-control" id="actualEndTime" name="actualEndTime">
+                        </div>
+
+                        <!-- Lesson Details -->
+                        <div class="col-12 mt-4" id="lessonDetailsSection">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-book me-2"></i>Lesson Details
+                            </h6>
+                        </div>
+
+                        <div class="col-12" id="lessonTopicField">
+                            <label for="lessonTopic" class="form-label">Lesson Topic</label>
+                            <input type="text" class="form-control" id="lessonTopic" name="lessonTopic" placeholder="What was covered in this lesson?">
+                        </div>
+
+                        <div class="col-12" id="studentProgressField">
+                            <label for="studentProgress" class="form-label">Student Progress</label>
+                            <textarea class="form-control" id="studentProgress" name="studentProgress" rows="2" placeholder="How did the student perform?"></textarea>
+                        </div>
+
+                        <div class="col-md-6" id="performanceScoreField">
+                            <label for="studentPerformanceScore" class="form-label">Performance Score (0-100)</label>
+                            <input type="number" class="form-control" id="studentPerformanceScore" name="studentPerformanceScore" min="0" max="100" placeholder="0-100">
+                        </div>
+
+                        <div class="col-md-6" id="spacer"></div>
+
+                        <div class="col-12" id="teacherNotesField">
+                            <label for="teacherNotes" class="form-label">Teacher Notes</label>
+                            <textarea class="form-control" id="teacherNotes" name="teacherNotes" rows="2" placeholder="Additional notes about the lesson..."></textarea>
+                        </div>
+
+                        <div class="col-12" id="homeworkField">
+                            <label for="homeworkAssigned" class="form-label">Homework Assigned</label>
+                            <textarea class="form-control" id="homeworkAssigned" name="homeworkAssigned" rows="2" placeholder="What homework was given?"></textarea>
+                        </div>
+
+                        <div class="col-12" id="nextLessonField">
+                            <label for="nextLessonPrep" class="form-label">Next Lesson Preparation</label>
+                            <textarea class="form-control" id="nextLessonPrep" name="nextLessonPrep" rows="2" placeholder="What should be prepared for next lesson?"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Attendance
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Details Modal -->
+<div class="modal fade" id="viewDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Attendance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="attendanceDetailsContent">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .student-avatar {
+        width: 32px;
+        height: 32px;
+        background: var(--primary-color);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 11px;
+    }
+
+    .lesson-topic {
+        max-width: 200px;
+        cursor: help;
+    }
+
+    .progress {
+        border-radius: 10px;
+    }
+
+    .table td {
+        vertical-align: middle;
+        padding: 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.375rem 0.75rem;
+    }
+
+    .modal-header {
+        background: var(--light-bg);
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .text-primary {
+        color: var(--primary-color) !important;
+    }
+
+    .alert-light {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        color: #495057;
+    }
+
+    .card-header .badge {
+        font-size: 0.7rem;
+    }
+
+    @@media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+
+        .student-avatar {
+            width: 28px;
+            height: 28px;
+            font-size: 10px;
+        }
+
+        .btn-group-sm > .btn {
+            padding: 0.25rem 0.5rem;
+        }
+
+        .modal-dialog {
+            margin: 0.5rem;
+        }
+    }
+</style>
+
+<script>
+    let isEditMode = false;
+
+    function openAttendanceModal(scheduleId = null) {
+        const modal = new bootstrap.Modal(document.getElementById('attendanceModal'));
+
+        document.getElementById('attendanceForm').reset();
+        document.getElementById('attendanceId').value = '0';
+        document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+
+        if (scheduleId) {
+            loadScheduleForAttendance(scheduleId);
+            document.getElementById('modalTitle').textContent = 'Record Attendance';
+        } else {
+            document.getElementById('modalTitle').textContent = 'Record Attendance';
+            document.getElementById('scheduleInfo').style.display = 'none';
+        }
+
+        isEditMode = false;
+        toggleTimeFields();
+        modal.show();
+    }
+
+    function recordDetailedAttendance(scheduleId) {
+        openAttendanceModal(scheduleId);
+    }
+
+    function editAttendance(attendanceId) {
+        isEditMode = true;
+        document.getElementById('modalTitle').textContent = 'Edit Attendance';
+        loadAttendanceData(attendanceId);
+        const modal = new bootstrap.Modal(document.getElementById('attendanceModal'));
+        modal.show();
+    }
+
+    async function loadScheduleForAttendance(scheduleId) {
+        try {
+            const response = await fetch(`@Url.Action("GetScheduleDetails", "Attendance")?scheduleId=${scheduleId}`);
+            const schedule = await response.json();
+
+            document.getElementById('classScheduleId').value = schedule.classScheduleId;
+            document.getElementById('studentId').value = schedule.studentId;
+            document.getElementById('teacherId').value = schedule.teacherId;
+            document.getElementById('attendanceDate').value = schedule.scheduleDate;
+
+            // Show schedule info
+            document.getElementById('scheduleInfo').style.display = 'block';
+            document.getElementById('scheduleDetails').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Student:</strong> ${schedule.studentName}<br>
+                        <strong>Date:</strong> ${new Date(schedule.scheduleDate).toLocaleDateString()}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Teacher:</strong> ${schedule.teacherName}<br>
+                        <strong>Time:</strong> ${schedule.startTime} - ${schedule.endTime}
+                    </div>
+                </div>
+            `;
+
+            // Set suggested times
+            document.getElementById('actualStartTime').value = schedule.startTime;
+            document.getElementById('actualEndTime').value = schedule.endTime;
+
+        } catch (error) {
+            console.error('Error loading schedule:', error);
+            showAlert('Error loading schedule details', 'error');
+        }
+    }
+
+    async function loadAttendanceData(attendanceId) {
+        try {
+            const response = await fetch(`@Url.Action("GetAttendance", "Attendance")?id=${attendanceId}`);
+            const attendance = await response.json();
+
+            document.getElementById('attendanceId').value = attendance.attendanceId;
+            document.getElementById('classScheduleId').value = attendance.classScheduleId;
+            document.getElementById('studentId').value = attendance.studentId;
+            document.getElementById('teacherId').value = attendance.teacherId;
+            document.getElementById('attendanceDate').value = attendance.attendanceDate;
+            document.getElementById('actualStartTime').value = attendance.actualStartTime || '';
+            document.getElementById('actualEndTime').value = attendance.actualEndTime || '';
+            document.getElementById('status').value = attendance.status;
+            document.getElementById('lessonTopic').value = attendance.lessonTopic || '';
+            document.getElementById('studentProgress').value = attendance.studentProgress || '';
+            document.getElementById('teacherNotes').value = attendance.teacherNotes || '';
+            document.getElementById('homeworkAssigned').value = attendance.homeworkAssigned || '';
+            document.getElementById('nextLessonPrep').value = attendance.nextLessonPrep || '';
+            document.getElementById('studentPerformanceScore').value = attendance.studentPerformanceScore || '';
+
+            document.getElementById('scheduleInfo').style.display = 'none';
+            toggleTimeFields();
+
+        } catch (error) {
+            console.error('Error loading attendance:', error);
+            showAlert('Error loading attendance data', 'error');
+        }
+    }
+
+    function toggleTimeFields() {
+        const status = document.getElementById('status').value;
+        const timeFields = ['startTimeField', 'endTimeField'];
+        const lessonFields = ['lessonDetailsSection', 'lessonTopicField', 'studentProgressField', 'performanceScoreField', 'teacherNotesField', 'homeworkField', 'nextLessonField'];
+
+        if (status === 'Present' || status === 'Late') {
+            timeFields.forEach(field => document.getElementById(field).style.display = 'block');
+            lessonFields.forEach(field => document.getElementById(field).style.display = 'block');
+        } else {
+            timeFields.forEach(field => document.getElementById(field).style.display = 'none');
+            lessonFields.forEach(field => document.getElementById(field).style.display = 'none');
+        }
+    }
+
+    document.getElementById('attendanceForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const url = isEditMode ? '@Url.Action("Update", "Attendance")' : '@Url.Action("Create", "Attendance")';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(result.message, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('attendanceModal')).hide();
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error saving attendance:', error);
+            showAlert('Error saving attendance', 'error');
+        }
+    });
+
+    async function quickAttendance(scheduleId, status) {
+        if (!confirm(`Mark attendance as ${status}?`)) return;
+
+        try {
+            const response = await fetch('@Url.Action("QuickAttendance", "Attendance")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `scheduleId=${scheduleId}&status=${status}`
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(result.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error recording quick attendance:', error);
+            showAlert('Error recording attendance', 'error');
+        }
+    }
+
+    async function deleteAttendance(attendanceId, studentName, date) {
+        if (confirm(`Are you sure you want to delete attendance record for ${studentName} on ${date}?`)) {
+            try {
+                const response = await fetch(`@Url.Action("Delete", "Attendance")?id=${attendanceId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting attendance:', error);
+                showAlert('Error deleting attendance', 'error');
+            }
+        }
+    }
+
+    async function viewAttendanceDetails(attendanceId) {
+        try {
+            const response = await fetch(`@Url.Action("GetAttendance", "Attendance")?id=${attendanceId}`);
+            const attendance = await response.json();
+
+            const statusBadge = {
+                'Present': '<span class="badge bg-success">Present</span>',
+                'Absent': '<span class="badge bg-danger">Absent</span>',
+                'Late': '<span class="badge bg-warning text-dark">Late</span>',
+                'Excused': '<span class="badge bg-info">Excused</span>'
+            };
+
+            document.getElementById('attendanceDetailsContent').innerHTML = `
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <strong>Date:</strong> ${new Date(attendance.attendanceDate).toLocaleDateString()}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Status:</strong> ${statusBadge[attendance.status] || attendance.status}
+                    </div>
+                    ${attendance.actualStartTime ? `
+                    <div class="col-md-6">
+                        <strong>Start Time:</strong> ${attendance.actualStartTime}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>End Time:</strong> ${attendance.actualEndTime || '-'}
+                    </div>` : ''}
+                    ${attendance.lessonTopic ? `
+                    <div class="col-12">
+                        <strong>Lesson Topic:</strong><br>
+                        ${attendance.lessonTopic}
+                    </div>` : ''}
+                    ${attendance.studentProgress ? `
+                    <div class="col-12">
+                        <strong>Student Progress:</strong><br>
+                        ${attendance.studentProgress}
+                    </div>` : ''}
+                    ${attendance.studentPerformanceScore ? `
+                    <div class="col-12">
+                        <strong>Performance Score:</strong> ${attendance.studentPerformanceScore}/100
+                    </div>` : ''}
+                    ${attendance.teacherNotes ? `
+                    <div class="col-12">
+                        <strong>Teacher Notes:</strong><br>
+                        ${attendance.teacherNotes}
+                    </div>` : ''}
+                    ${attendance.homeworkAssigned ? `
+                    <div class="col-12">
+                        <strong>Homework Assigned:</strong><br>
+                        ${attendance.homeworkAssigned}
+                    </div>` : ''}
+                    ${attendance.nextLessonPrep ? `
+                    <div class="col-12">
+                        <strong>Next Lesson Prep:</strong><br>
+                        ${attendance.nextLessonPrep}
+                    </div>` : ''}
+                </div>
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById('viewDetailsModal'));
+            modal.show();
+
+        } catch (error) {
+            console.error('Error loading attendance details:', error);
+            showAlert('Error loading attendance details', 'error');
+        }
+    }
+
+    // Search and filter functionality
+    document.getElementById('searchAttendance').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        filterTable(searchTerm, document.getElementById('statusFilter').value);
+    });
+
+    function filterAttendance() {
+        const searchTerm = document.getElementById('searchAttendance').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        filterTable(searchTerm, statusFilter);
+    }
+
+    function filterTable(searchTerm, statusFilter) {
+        const rows = document.querySelectorAll('#attendanceTable tbody tr');
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const statusCell = row.cells[4]; // Status column
+            const status = statusCell.textContent.trim();
+
+            const matchesSearch = text.includes(searchTerm);
+            const matchesStatus = !statusFilter || status.toLowerCase().includes(statusFilter.toLowerCase());
+
+            row.style.display = matchesSearch && matchesStatus ? '' : 'none';
+        });
+    }
+
+    function showAlert(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>

@@ -30,6 +30,8 @@ namespace KMSI.Models
         public string? Notes { get; set; }
         public DateTime? CreatedDate { get; set; } = DateTime.Now;
         public int? CreatedBy { get; set; }
+        public DateTime? UpdatedDate { get; set; }
+        public int? UpdatedBy { get; set; }
         // Navigation Properties
         public virtual Student? Student { get; set; }
         public virtual StudentExamination? StudentExamination { get; set; }

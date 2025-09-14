@@ -66,6 +66,20 @@ namespace KMSI.Data
             ConfigureAcademicManagement(modelBuilder);
             ConfigureInventoryManagement(modelBuilder);
             ConfigureSystemManagement(modelBuilder);
+
+            // Configure tables with triggers to not use OUTPUT clause
+            ConfigureTriggeredTables(modelBuilder);
+        }
+
+        private void ConfigureTriggeredTables(ModelBuilder modelBuilder)
+        {
+            // Configure Student table to work with triggers
+            modelBuilder.Entity<Student>()
+                .ToTable(tb => tb.HasTrigger("tr_Students_AuditLog"));
+
+            // Add other tables with triggers here if needed
+            modelBuilder.Entity<StockMovement>()
+                .ToTable(tb => tb.HasTrigger("tr_StockMovements_UpdateInventory"));
         }
 
         private void ConfigureUserManagement(ModelBuilder modelBuilder)

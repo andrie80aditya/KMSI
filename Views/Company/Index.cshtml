@@ -1,0 +1,463 @@
+﻿@model IEnumerable<KMSI.Models.Company>
+@{
+    ViewData["Title"] = "Company Management";
+    ViewData["Breadcrumb"] = "Company Management";
+}
+
+<div class="company-management">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Company Management</h1>
+            <p class="text-muted">Manage companies and organizational structure</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="openCompanyModal()">
+            <i class="fas fa-plus me-2"></i>Add New Company
+        </button>
+    </div>
+
+    <!-- Companies Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">Companies List</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group input-group-sm" style="width: 250px;">
+                        <input type="text" class="form-control" id="searchCompanies" placeholder="Search companies...">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="companiesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Company</th>
+                            <th>Code</th>
+                            <th>Parent Company</th>
+                            <th>Location</th>
+                            <th>Contact</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var company in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="company-icon me-3">
+                                            <i class="fas fa-building"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@company.CompanyName</div>
+                                            <small class="text-muted">@company.CompanyCode</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">@company.CompanyCode</span>
+                                </td>
+                                <td>@(company.ParentCompany?.CompanyName ?? "-")</td>
+                                <td>
+                                    <div>
+                                        @if (!string.IsNullOrEmpty(company.City))
+                                        {
+                                            <div class="fw-medium">@company.City</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(company.Province))
+                                        {
+                                            <small class="text-muted">@company.Province</small>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        @if (!string.IsNullOrEmpty(company.Phone))
+                                        {
+                                            <div><i class="fas fa-phone fa-sm me-1"></i>@company.Phone</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(company.Email))
+                                        {
+                                            <div><i class="fas fa-envelope fa-sm me-1"></i>@company.Email</div>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (company.IsHeadOffice)
+                                    {
+                                        <span class="badge bg-primary">Head Office</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info">Branch</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (company.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary" onclick="editCompany(@company.CompanyId)">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" onclick="deleteCompany(@company.CompanyId, '@company.CompanyName')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Company Modal -->
+<div class="modal fade" id="companyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add New Company</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="companyForm">
+                <div class="modal-body">
+                    <input type="hidden" id="companyId" name="companyId" value="0">
+
+                    <div class="row g-3">
+                        <!-- Basic Information -->
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-building me-2"></i>Company Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="companyCode" class="form-label">Company Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control text-uppercase" id="companyCode" name="companyCode" maxlength="3" required>
+                            <small class="text-muted">Exactly 3 characters</small>
+                        </div>
+
+                        <div class="col-md-8">
+                            <label for="companyName" class="form-label">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="companyName" name="companyName" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="parentCompanyId" class="form-label">Parent Company</label>
+                            <select class="form-select" id="parentCompanyId" name="parentCompanyId">
+                                <option value="">Select Parent Company (Optional)</option>
+                                @foreach (var parent in ViewBag.ParentCompanies)
+                                {
+                                    <option value="@parent.CompanyId">@parent.CompanyName</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" id="isHeadOffice" name="isHeadOffice">
+                                <label class="form-check-label" for="isHeadOffice">
+                                    Head Office
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Contact Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="phone" name="phone">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
+
+                        <!-- Address Information -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-map-marker-alt me-2"></i>Address Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="city" name="city">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="province" class="form-label">Province</label>
+                            <input type="text" class="form-control" id="province" name="province">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="isActive" name="isActive" checked>
+                                <label class="form-check-label" for="isActive">
+                                    Active Company
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Company
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .company-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--info-color);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 16px;
+    }
+
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.375rem 0.75rem;
+    }
+
+    .modal-header {
+        background: var(--light-bg);
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .text-primary {
+        color: var(--primary-color) !important;
+    }
+
+    .text-uppercase {
+        text-transform: uppercase;
+    }
+
+    @@media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+
+        .company-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+        }
+
+        .btn-group-sm > .btn {
+            padding: 0.25rem 0.5rem;
+        }
+
+        .modal-dialog {
+            margin: 0.5rem;
+        }
+    }
+</style>
+
+<script>
+    let isEditMode = false;
+
+    function openCompanyModal(companyId = null) {
+        isEditMode = !!companyId;
+        const modal = new bootstrap.Modal(document.getElementById('companyModal'));
+
+        if (isEditMode) {
+            document.getElementById('modalTitle').textContent = 'Edit Company';
+            loadCompanyData(companyId);
+        } else {
+            document.getElementById('modalTitle').textContent = 'Add New Company';
+            document.getElementById('companyForm').reset();
+            document.getElementById('companyId').value = '0';
+            document.getElementById('isActive').checked = true;
+        }
+
+        modal.show();
+    }
+
+    function editCompany(companyId) {
+        openCompanyModal(companyId);
+    }
+
+    async function loadCompanyData(companyId) {
+        try {
+            const response = await fetch('@Url.Action("GetCompany", "Company")?id=' + companyId);
+            const company = await response.json();
+
+            document.getElementById('companyId').value = company.companyId;
+            document.getElementById('companyCode').value = company.companyCode;
+            document.getElementById('companyName').value = company.companyName;
+            document.getElementById('parentCompanyId').value = company.parentCompanyId || '';
+            document.getElementById('address').value = company.address || '';
+            document.getElementById('city').value = company.city || '';
+            document.getElementById('province').value = company.province || '';
+            document.getElementById('phone').value = company.phone || '';
+            document.getElementById('email').value = company.email || '';
+            document.getElementById('isHeadOffice').checked = company.isHeadOffice;
+            document.getElementById('isActive').checked = company.isActive;
+        } catch (error) {
+            console.error('Error loading company:', error);
+            showAlert('Error loading company data', 'error');
+        }
+    }
+
+    document.getElementById('companyForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        // Add the checkbox values explicitly since FormData doesn't handle unchecked checkboxes
+        formData.set('isHeadOffice', document.getElementById('isHeadOffice').checked);
+        formData.set('isActive', document.getElementById('isActive').checked);
+
+        const url = isEditMode ? '@Url.Action("Update", "Company")' : '@Url.Action("Create", "Company")';
+            
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(result.message, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('companyModal')).hide();
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error saving company:', error);
+            showAlert('Error saving company', 'error');
+        }
+    });
+
+    async function deleteCompany(companyId, companyName) {
+        if (confirm(`Are you sure you want to delete company "${companyName}"?`)) {
+            try {
+                const response = await fetch('@Url.Action("Delete", "Company")?id=' + companyId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting company:', error);
+                showAlert('Error deleting company', 'error');
+            }
+        }
+    }
+
+    // Search functionality
+    document.getElementById('searchCompanies').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#companiesTable tbody tr');
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+
+    // Company code validation
+    document.getElementById('companyCode').addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase();
+        
+        // Validate length
+        if (e.target.value.length !== 3 && e.target.value.length > 0) {
+            e.target.setCustomValidity('Company code must be exactly 3 characters');
+        } else {
+            e.target.setCustomValidity('');
+        }
+    });
+
+    function showAlert(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+</script>
