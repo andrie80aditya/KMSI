@@ -1,0 +1,1282 @@
+﻿@model IEnumerable<KMSI.Models.BillingPeriod>
+@{
+    ViewData["Title"] = "Billing Periods";
+    ViewData["Breadcrumb"] = "Billing Periods";
+}
+
+<div class="billing-period-management">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Billing Periods</h1>
+            <p class="text-muted">Manage billing cycles and period settings</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="openBillingPeriodModal()">
+            <i class="fas fa-plus me-2"></i>Create New Period
+        </button>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-0">@Model.Count()</h5>
+                            <small>Total Periods</small>
+                        </div>
+                        <i class="fas fa-calendar-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-0">@Model.Count(bp => bp.Status == "Draft")</h5>
+                            <small>Draft</small>
+                        </div>
+                        <i class="fas fa-edit fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-0">@Model.Count(bp => bp.Status == "Generated")</h5>
+                            <small>Generated</small>
+                        </div>
+                        <i class="fas fa-cogs fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-0">@Model.Count(bp => bp.Status == "Finalized")</h5>
+                            <small>Finalized</small>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Billing Periods Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">Billing Periods List</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex gap-2 align-items-center">
+                        <select id="statusFilter" class="form-select form-select-sm" onchange="filterPeriods()">
+                            <option value="">All Status</option>
+                            <option value="Draft">Draft</option>
+                            <option value="Generated">Generated</option>
+                            <option value="Finalized">Finalized</option>
+                        </select>
+                        <div class="input-group input-group-sm" style="width: 250px;">
+                            <input type="text" class="form-control" id="searchPeriods" placeholder="Search periods...">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="periodsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Period Name</th>
+                            <th>Duration</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Billings</th>
+                            <th>Payrolls</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var period in Model)
+                        {
+                            var totalBillings = period.StudentBillings?.Count ?? 0;
+                            var totalPayrolls = period.TeacherPayrolls?.Count ?? 0;
+                            var daysBetween = (period.EndDate.ToDateTime(TimeOnly.MinValue) - period.StartDate.ToDateTime(TimeOnly.MinValue)).TotalDays;
+                            
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-primary">@period.PeriodName</div>
+                                    <small class="text-muted">
+                                        @if (period.GeneratedDate.HasValue)
+                                        {
+                                            <span>Generated: @period.GeneratedDate.Value.ToString("dd/MM/yyyy")</span>
+                                        }
+                                        @if (period.FinalizedDate.HasValue)
+                                        {
+                                            <span>Finalized: @period.FinalizedDate.Value.ToString("dd/MM/yyyy")</span>
+                                        }
+                                    </small>
+                                </td>
+                                <td>
+                                    <div>@period.StartDate.ToString("dd/MM/yyyy") - @period.EndDate.ToString("dd/MM/yyyy")</div>
+                                    <small class="text-muted">@Math.Ceiling(daysBetween) days</small>
+                                </td>
+                                <td>
+                                    <div>@period.DueDate.ToString("dd/MM/yyyy")</div>
+                                    @{
+                                        var daysUntilDue = (period.DueDate.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays;
+                                    }
+                                    @if (daysUntilDue < 0)
+                                    {
+                                        <small class="text-danger">Overdue by @Math.Abs(Math.Floor(daysUntilDue)) days</small>
+                                    }
+                                    else if (daysUntilDue <= 7)
+                                    {
+                                        <small class="text-warning">Due in @Math.Floor(daysUntilDue) days</small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">@Math.Floor(daysUntilDue) days remaining</small>
+                                    }
+                                </td>
+                                <td>
+                                    @switch (period.Status)
+                                    {
+                                        case "Draft":
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-edit me-1"></i>Draft
+                                            </span>
+                                            break;
+                                        case "Generated":
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-cogs me-1"></i>Generated
+                                            </span>
+                                            break;
+                                        case "Finalized":
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Finalized
+                                            </span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary">@period.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (totalBillings > 0)
+                                    {
+                                        <div class="fw-semibold">@totalBillings billings</div>
+                                        var paidBillings = period.StudentBillings?.Count(sb => sb.Status == "Paid") ?? 0;
+                                        var outstandingBillings = period.StudentBillings?.Count(sb => sb.Status == "Outstanding") ?? 0;
+                                        <small class="text-muted">
+                                            <span class="text-success">@paidBillings paid</span>,
+                                            <span class="text-warning">@outstandingBillings pending</span>
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No billings</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (totalPayrolls > 0)
+                                    {
+                                        <div class="fw-semibold">@totalPayrolls payrolls</div>
+                                        var paidPayrolls = period.TeacherPayrolls?.Count(tp => tp.Status == "Paid") ?? 0;
+                                        var draftPayrolls = period.TeacherPayrolls?.Count(tp => tp.Status == "Draft") ?? 0;
+                                        <small class="text-muted">
+                                            <span class="text-success">@paidPayrolls paid</span>,
+                                            <span class="text-warning">@draftPayrolls draft</span>
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No payrolls</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" onclick="viewPeriodStats(@period.BillingPeriodId)">
+                                                <i class="fas fa-chart-bar me-2"></i>View Statistics
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            
+                                            @if (period.Status == "Draft")
+                                            {
+                                                <li><a class="dropdown-item" href="#" onclick="editBillingPeriod(@period.BillingPeriodId)">
+                                                    <i class="fas fa-edit me-2"></i>Edit
+                                                </a></li>
+                                                <li><a class="dropdown-item text-info" href="#" onclick="generateBillings(@period.BillingPeriodId)">
+                                                    <i class="fas fa-cogs me-2"></i>Generate Billings
+                                                </a></li>
+                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteBillingPeriod(@period.BillingPeriodId, '@period.PeriodName')">
+                                                    <i class="fas fa-trash me-2"></i>Delete
+                                                </a></li>
+                                            }
+                                            
+                                            @if (period.Status == "Generated")
+                                            {
+                                                <li><a class="dropdown-item text-success" href="#" onclick="finalizePeriod(@period.BillingPeriodId)">
+                                                    <i class="fas fa-check me-2"></i>Finalize Period
+                                                </a></li>
+                                                <li><a class="dropdown-item text-warning" href="#" onclick="reopenPeriod(@period.BillingPeriodId)">
+                                                    <i class="fas fa-undo me-2"></i>Reopen to Draft
+                                                </a></li>
+                                            }
+                                            
+                                            @if (period.Status == "Finalized")
+                                            {
+                                                <li><a class="dropdown-item text-warning" href="#" onclick="reopenPeriod(@period.BillingPeriodId)">
+                                                    <i class="fas fa-undo me-2"></i>Reopen to Generated
+                                                </a></li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Billing Period Modal -->
+<div class="modal fade" id="billingPeriodModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Create New Billing Period</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="billingPeriodForm">
+                <div class="modal-body">
+                    <input type="hidden" id="billingPeriodId" name="billingPeriodId" value="0">
+
+                    <div class="row g-3">
+                        <!-- Period Information -->
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-calendar-alt me-2"></i>Period Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="periodName" class="form-label">Period Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="periodName" name="periodName" required 
+                                   placeholder="e.g., January 2025, Q1 2025">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Status</label>
+                            <input type="text" class="form-control" id="status" name="status" value="Draft" readonly>
+                        </div>
+
+                        <!-- Date Range -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-calendar-week me-2"></i>Date Range
+                            </h6>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="startDate" class="form-label">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="startDate" name="startDate" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="endDate" class="form-label">End Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="endDate" name="endDate" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="dueDate" class="form-label">Due Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="dueDate" name="dueDate" required>
+                        </div>
+
+                        <!-- Summary Information (Edit Mode Only) -->
+                        <div class="col-12 mt-4" id="summarySection" style="display: none;">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Summary Information
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <div class="h5 mb-1" id="totalBillings">0</div>
+                                        <small class="text-muted">Student Billings</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <div class="h5 mb-1" id="totalPayrolls">0</div>
+                                        <small class="text-muted">Teacher Payrolls</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <div class="h5 mb-1" id="totalBillingAmount">Rp 0</div>
+                                        <small class="text-muted">Total Billing</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <div class="h5 mb-1" id="totalPayrollAmount">Rp 0</div>
+                                        <small class="text-muted">Total Payroll</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveButton">
+                        <i class="fas fa-save me-2"></i>Save Period
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Modal -->
+<div class="modal fade" id="statsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-bar me-2"></i>Billing Period Statistics
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="statsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="mt-2">Loading statistics...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .billing-period-management .card {
+        transition: all 0.2s ease;
+    }
+
+    .billing-period-management .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .dropdown-menu {
+        border: 1px solid var(--gray-200);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .dropdown-item:hover {
+        background-color: var(--gray-100);
+    }
+
+    .modal-header {
+        background: var(--light-bg);
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .text-primary {
+        color: var(--primary-color) !important;
+    }
+
+    @@media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+
+        .btn-group-sm > .btn {
+            padding: 0.25rem 0.5rem;
+        }
+
+        .modal-dialog {
+            margin: 0.5rem;
+        }
+
+        .row.mb-4 .col-md-3 {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+
+<script>
+    // Global variables
+    let isEditMode = false;
+    let currentPeriodId = null;
+
+    // Initialize page when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeEventListeners();
+        initializeSearchAndFilter();
+    });
+
+    // Initialize all event listeners
+    function initializeEventListeners() {
+        // Form submission
+        document.getElementById('billingPeriodForm').addEventListener('submit', handleFormSubmit);
+
+        // Search functionality
+        document.getElementById('searchPeriods').addEventListener('input', handleSearch);
+
+        // Status filter
+        document.getElementById('statusFilter').addEventListener('change', filterPeriods);
+
+        // Date validation
+        document.getElementById('startDate').addEventListener('change', validateDates);
+        document.getElementById('endDate').addEventListener('change', validateDates);
+    }
+
+    // Initialize search and filter functionality
+    function initializeSearchAndFilter() {
+        // Set focus to search input when page loads
+        setTimeout(() => {
+            document.getElementById('searchPeriods').focus();
+        }, 500);
+    }
+
+    // Main modal functions
+    function openBillingPeriodModal(periodId = null) {
+        isEditMode = !!periodId;
+        currentPeriodId = periodId;
+        const modal = new bootstrap.Modal(document.getElementById('billingPeriodModal'));
+
+        if (isEditMode) {
+            setupEditMode();
+            loadBillingPeriodData(periodId);
+        } else {
+            setupCreateMode();
+        }
+
+        modal.show();
+    }
+
+    function setupEditMode() {
+        document.getElementById('modalTitle').textContent = 'Edit Billing Period';
+        document.getElementById('saveButton').innerHTML = '<i class="fas fa-save me-2"></i>Update Period';
+    }
+
+    function setupCreateMode() {
+        document.getElementById('modalTitle').textContent = 'Create New Billing Period';
+        document.getElementById('saveButton').innerHTML = '<i class="fas fa-save me-2"></i>Save Period';
+        document.getElementById('billingPeriodForm').reset();
+        document.getElementById('billingPeriodId').value = '0';
+        document.getElementById('status').value = 'Draft';
+        document.getElementById('summarySection').style.display = 'none';
+        setDefaultDates();
+        enableAllFormFields();
+    }
+
+    function setDefaultDates() {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 15);
+
+        document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+        document.getElementById('endDate').value = lastDay.toISOString().split('T')[0];
+        document.getElementById('dueDate').value = dueDate.toISOString().split('T')[0];
+    }
+
+    function editBillingPeriod(periodId) {
+        openBillingPeriodModal(periodId);
+    }
+
+    // Load billing period data for editing
+    async function loadBillingPeriodData(periodId) {
+        try {
+            showLoadingInModal();
+
+            const response = await fetch(`/BillingPeriod/GetBillingPeriod?id=${periodId}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const period = await response.json();
+            hideLoadingInModal();
+
+            populateFormData(period);
+            setupFormPermissions(period);
+
+        } catch (error) {
+            console.error('Error loading billing period:', error);
+            hideLoadingInModal();
+            showAlert('Error loading billing period data', 'error');
+        }
+    }
+
+    function populateFormData(period) {
+        document.getElementById('billingPeriodId').value = period.billingPeriodId;
+        document.getElementById('periodName').value = period.periodName;
+        document.getElementById('startDate').value = period.startDate;
+        document.getElementById('endDate').value = period.endDate;
+        document.getElementById('dueDate').value = period.dueDate;
+        document.getElementById('status').value = period.status;
+
+        // Show and populate summary section
+        document.getElementById('summarySection').style.display = 'block';
+        document.getElementById('totalBillings').textContent = period.totalStudentBillings;
+        document.getElementById('totalPayrolls').textContent = period.totalTeacherPayrolls;
+        document.getElementById('totalBillingAmount').textContent = formatCurrency(period.totalBillingAmount);
+        document.getElementById('totalPayrollAmount').textContent = formatCurrency(period.totalPayrollAmount);
+    }
+
+    function setupFormPermissions(period) {
+        const canEdit = period.canEdit;
+
+        // Enable/disable form fields based on permissions
+        document.getElementById('periodName').disabled = !canEdit;
+        document.getElementById('startDate').disabled = !canEdit;
+        document.getElementById('endDate').disabled = !canEdit;
+        document.getElementById('dueDate').disabled = !canEdit;
+
+        // Show/hide save button
+        const saveButton = document.getElementById('saveButton');
+        if (canEdit) {
+            saveButton.style.display = 'block';
+            saveButton.disabled = false;
+        } else {
+            saveButton.style.display = 'none';
+        }
+
+        // Update modal title if not editable
+        if (!canEdit) {
+            document.getElementById('modalTitle').textContent = `View Billing Period - ${period.status}`;
+        }
+    }
+
+    function enableAllFormFields() {
+        document.getElementById('periodName').disabled = false;
+        document.getElementById('startDate').disabled = false;
+        document.getElementById('endDate').disabled = false;
+        document.getElementById('dueDate').disabled = false;
+        document.getElementById('saveButton').style.display = 'block';
+        document.getElementById('saveButton').disabled = false;
+    }
+
+    // Form submission handler
+    async function handleFormSubmit(e) {
+        e.preventDefault();
+
+        if (!validateForm()) {
+            return;
+        }
+
+        const formData = new FormData(e.target);
+        const url = isEditMode ? '/BillingPeriod/Update' : '/BillingPeriod/Create';
+
+        try {
+            showSaveButton('saving');
+
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert(result.message, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('billingPeriodModal')).hide();
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error saving billing period:', error);
+            showAlert('Error saving billing period. Please try again.', 'error');
+        } finally {
+            showSaveButton('normal');
+        }
+    }
+
+    // Form validation
+    function validateForm() {
+        const periodName = document.getElementById('periodName').value.trim();
+        const startDate = new Date(document.getElementById('startDate').value);
+        const endDate = new Date(document.getElementById('endDate').value);
+        const dueDate = new Date(document.getElementById('dueDate').value);
+
+        // Check required fields
+        if (!periodName) {
+            showAlert('Period name is required', 'error');
+            document.getElementById('periodName').focus();
+            return false;
+        }
+
+        // Validate date range
+        if (startDate >= endDate) {
+            showAlert('End date must be after start date', 'error');
+            document.getElementById('endDate').focus();
+            return false;
+        }
+
+        // Validate due date
+        if (dueDate <= endDate) {
+            showAlert('Due date should be after the end date', 'warning');
+        }
+
+        return true;
+    }
+
+    function validateDates() {
+        const startDate = new Date(document.getElementById('startDate').value);
+        const endDate = new Date(document.getElementById('endDate').value);
+
+        if (startDate && endDate && startDate >= endDate) {
+            document.getElementById('endDate').setCustomValidity('End date must be after start date');
+        } else {
+            document.getElementById('endDate').setCustomValidity('');
+        }
+    }
+
+    // Action functions
+    async function deleteBillingPeriod(periodId, periodName) {
+        const confirmMessage = `Are you sure you want to delete billing period "${periodName}"?\n\nThis action cannot be undone and will remove all associated data.`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/BillingPeriod/Delete?id=${periodId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert(result.message, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting billing period:', error);
+            showAlert('Error deleting billing period', 'error');
+        }
+    }
+
+    async function generateBillings(periodId) {
+        const confirmMessage = 'Are you sure you want to generate billings for this period?\n\nThis will:\n- Change the status to "Generated"\n- Lock the period for editing\n- Allow creation of student billings';
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/BillingPeriod/GenerateBillings?id=${periodId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert(result.message, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error generating billings:', error);
+            showAlert('Error generating billings', 'error');
+        }
+    }
+
+    async function finalizePeriod(periodId) {
+        const confirmMessage = 'Are you sure you want to finalize this billing period?\n\nOnce finalized:\n- No modifications can be made\n- All billings must be paid\n- Only Super Admin can reopen';
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/BillingPeriod/FinalizePeriod?id=${periodId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert(result.message, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error finalizing period:', error);
+            showAlert('Error finalizing period', 'error');
+        }
+    }
+
+    async function reopenPeriod(periodId) {
+        const confirmMessage = 'Are you sure you want to reopen this billing period?\n\nThis will change the status and allow modifications again.';
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/BillingPeriod/ReopenPeriod?id=${periodId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert(result.message, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error reopening period:', error);
+            showAlert('Error reopening period', 'error');
+        }
+    }
+
+    // Statistics modal
+    async function viewPeriodStats(periodId) {
+        const modal = new bootstrap.Modal(document.getElementById('statsModal'));
+        modal.show();
+
+        // Show loading state
+        document.getElementById('statsContent').innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-2">Loading statistics...</div>
+            </div>
+        `;
+
+        try {
+            const response = await fetch(`/BillingPeriod/GetBillingPeriodStats?id=${periodId}`);
+            const result = await response.json();
+
+            if (result.success) {
+                displayStats(result.stats);
+            } else {
+                document.getElementById('statsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${result.message}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+            document.getElementById('statsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading statistics. Please try again.
+                </div>
+            `;
+        }
+    }
+
+    function displayStats(stats) {
+        const studentBillings = stats.studentBillings;
+        const teacherPayrolls = stats.teacherPayrolls;
+
+        document.getElementById('statsContent').innerHTML = `
+            <div class="row">
+                <!-- Student Billings Card -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Student Billings</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <div class="h4 mb-1">${studentBillings.total}</div>
+                                        <small class="text-muted">Total Billings</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+                                        <div class="h4 mb-1 text-success">${studentBillings.paid}</div>
+                                        <small class="text-muted">Paid</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
+                                        <div class="h4 mb-1 text-warning">${studentBillings.outstanding}</div>
+                                        <small class="text-muted">Outstanding</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-3 bg-danger bg-opacity-10 rounded">
+                                        <div class="h4 mb-1 text-danger">${studentBillings.cancelled}</div>
+                                        <small class="text-muted">Cancelled</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total Amount:</span>
+                                        <strong>${formatCurrency(studentBillings.totalAmount)}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between text-success">
+                                        <span>Paid Amount:</span>
+                                        <strong>${formatCurrency(studentBillings.paidAmount)}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between text-warning">
+                                        <span>Outstanding Amount:</span>
+                                        <strong>${formatCurrency(studentBillings.outstandingAmount)}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teacher Payrolls Card -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-money-check-alt me-2"></i>Teacher Payrolls</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <div class="h4 mb-1">${teacherPayrolls.total}</div>
+                                        <small class="text-muted">Total Payrolls</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+                                        <div class="h4 mb-1 text-success">${teacherPayrolls.paid}</div>
+                                        <small class="text-muted">Paid</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-3 bg-info bg-opacity-10 rounded">
+                                        <div class="h4 mb-1 text-info">${teacherPayrolls.processed}</div>
+                                        <small class="text-muted">Processed</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
+                                        <div class="h4 mb-1 text-warning">${teacherPayrolls.draft}</div>
+                                        <small class="text-muted">Draft</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total Amount:</span>
+                                        <strong>${formatCurrency(teacherPayrolls.totalAmount)}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total Hours:</span>
+                                        <strong>${teacherPayrolls.totalHours} hours</strong>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between text-info">
+                                        <span>Avg. Rate:</span>
+                                        <strong>${teacherPayrolls.totalHours > 0 ? formatCurrency(teacherPayrolls.totalAmount / teacherPayrolls.totalHours) : 'Rp 0'}/hour</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Financial Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+                                        <div class="h5 mb-1 text-success">${formatCurrency(studentBillings.totalAmount)}</div>
+                                        <small class="text-muted">Total Revenue</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-danger bg-opacity-10 rounded">
+                                        <div class="h5 mb-1 text-danger">${formatCurrency(teacherPayrolls.totalAmount)}</div>
+                                        <small class="text-muted">Total Expenses</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-primary bg-opacity-10 rounded">
+                                        <div class="h5 mb-1 text-primary">${formatCurrency(studentBillings.totalAmount - teacherPayrolls.totalAmount)}</div>
+                                        <small class="text-muted">Net Profit</small>
+                                    </div>
+                                </div>
+                            </div>
+                            ${studentBillings.totalAmount > 0 ? `
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Profit Margin:</span>
+                                        <strong>${(((studentBillings.totalAmount - teacherPayrolls.totalAmount) / studentBillings.totalAmount) * 100).toFixed(1)}%</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Collection Rate:</span>
+                                        <strong>${((studentBillings.paidAmount / studentBillings.totalAmount) * 100).toFixed(1)}%</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Search and filter functions
+    function handleSearch(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        filterTable(searchTerm, document.getElementById('statusFilter').value);
+    }
+
+    function filterPeriods() {
+        const searchTerm = document.getElementById('searchPeriods').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        filterTable(searchTerm, statusFilter);
+    }
+
+    function filterTable(searchTerm, statusFilter) {
+        const rows = document.querySelectorAll('#periodsTable tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const statusBadge = row.querySelector('.badge');
+            const rowStatus = statusBadge ? statusBadge.textContent.trim() : '';
+
+            const matchesSearch = !searchTerm || text.includes(searchTerm);
+            const matchesStatus = !statusFilter || rowStatus.toLowerCase().includes(statusFilter.toLowerCase());
+
+            if (matchesSearch && matchesStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show "no results" message if needed
+        updateNoResultsMessage(visibleCount);
+    }
+
+    function updateNoResultsMessage(visibleCount) {
+        const tbody = document.querySelector('#periodsTable tbody');
+        let noResultsRow = document.getElementById('noResultsRow');
+
+        if (visibleCount === 0) {
+            if (!noResultsRow) {
+                noResultsRow = document.createElement('tr');
+                noResultsRow.id = 'noResultsRow';
+                noResultsRow.innerHTML = `
+                    <td colspan="7" class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="fas fa-search fa-3x mb-3"></i>
+                            <div>No billing periods found matching your criteria</div>
+                            <small>Try adjusting your search terms or filters</small>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(noResultsRow);
+            }
+        } else {
+            if (noResultsRow) {
+                noResultsRow.remove();
+            }
+        }
+    }
+
+    // Utility functions
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount || 0);
+    }
+
+    function showLoadingInModal() {
+        const modalBody = document.querySelector('#billingPeriodModal .modal-body');
+        modalBody.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-2">Loading billing period data...</div>
+            </div>
+        `;
+    }
+
+    function hideLoadingInModal() {
+        // Restore the original modal content
+        const modalBody = document.querySelector('#billingPeriodModal .modal-body');
+        if (modalBody) {
+            modalBody.innerHTML = `
+                <input type="hidden" id="billingPeriodId" name="billingPeriodId" value="0">
+
+                <div class="row g-3">
+                    <!-- Period Information -->
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-calendar-alt me-2"></i>Period Information
+                        </h6>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="periodName" class="form-label">Period Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="periodName" name="periodName" required
+                               placeholder="e.g., January 2025, Q1 2025">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="status" class="form-label">Status</label>
+                        <input type="text" class="form-control" id="status" name="status" value="Draft" readonly>
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="col-12 mt-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-calendar-week me-2"></i>Date Range
+                        </h6>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="startDate" class="form-label">Start Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="startDate" name="startDate" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="endDate" class="form-label">End Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="endDate" name="endDate" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="dueDate" class="form-label">Due Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="dueDate" name="dueDate" required>
+                    </div>
+
+                    <!-- Summary Information (Edit Mode Only) -->
+                    <div class="col-12 mt-4" id="summarySection" style="display: none;">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Summary Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <div class="h5 mb-1" id="totalBillings">0</div>
+                                    <small class="text-muted">Student Billings</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <div class="h5 mb-1" id="totalPayrolls">0</div>
+                                    <small class="text-muted">Teacher Payrolls</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <div class="h5 mb-1" id="totalBillingAmount">Rp 0</div>
+                                    <small class="text-muted">Total Billing</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <div class="h5 mb-1" id="totalPayrollAmount">Rp 0</div>
+                                    <small class="text-muted">Total Payroll</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function showSaveButton(state) {
+        const saveButton = document.getElementById('saveButton');
+
+        if (state === 'saving') {
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+        } else {
+            saveButton.disabled = false;
+            saveButton.innerHTML = isEditMode ?
+                '<i class="fas fa-save me-2"></i>Update Period' :
+                '<i class="fas fa-save me-2"></i>Save Period';
+        }
+    }
+
+    function showAlert(message, type) {
+        // Remove existing alerts
+        const existingAlerts = document.querySelectorAll('.toast');
+        existingAlerts.forEach(alert => alert.remove());
+
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+
+        toastContainer.appendChild(toast);
+
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: type === 'success' ? 3000 : 5000
+        });
+
+        bsToast.show();
+
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+N or Cmd+N to create new period
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            openBillingPeriodModal();
+        }
+
+        // Escape to close modal
+        if (e.key === 'Escape') {
+            const openModal = bootstrap.Modal.getInstance(document.getElementById('billingPeriodModal'));
+            if (openModal) {
+                openModal.hide();
+            }
+
+            const openStatsModal = bootstrap.Modal.getInstance(document.getElementById('statsModal'));
+            if (openStatsModal) {
+                openStatsModal.hide();
+            }
+        }
+
+        // Ctrl+F or Cmd+F to focus search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            document.getElementById('searchPeriods').focus();
+            document.getElementById('searchPeriods').select();
+        }
+    });
+
+    // Export functions for global access (if needed)
+    window.openBillingPeriodModal = openBillingPeriodModal;
+    window.editBillingPeriod = editBillingPeriod;
+    window.deleteBillingPeriod = deleteBillingPeriod;
+    window.generateBillings = generateBillings;
+    window.finalizePeriod = finalizePeriod;
+    window.reopenPeriod = reopenPeriod;
+    window.viewPeriodStats = viewPeriodStats;
+    window.filterPeriods = filterPeriods;
+</script>

@@ -4,14 +4,20 @@ using KMSI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using KMSI.Services;
 
 namespace KMSI.Controllers
 {
     [Authorize(Policy = "BranchManagerAndAbove")]
     public class CertificateController : BaseController
     {
-        public CertificateController(KMSIDbContext context) : base(context)
+        private readonly IPdfService _pdfService;
+        private readonly IEmailService _emailService;
+
+        public CertificateController(KMSIDbContext context, IPdfService pdfService, IEmailService emailService) : base(context)
         {
+            _pdfService = pdfService;
+            _emailService = emailService;
         }
 
         public async Task<IActionResult> Index()
@@ -317,32 +323,49 @@ namespace KMSI.Controllers
                 certificate.LastPrintDate = DateTime.Now;
                 certificate.UpdatedBy = GetCurrentUserId();
                 certificate.UpdatedDate = DateTime.Now;
-
                 await _context.SaveChangesAsync();
 
-                // In a real application, you would generate a PDF here
-                // For now, we'll just return success with certificate data
-                var certificateData = new
+                // Generate PDF
+                var pdfBytes = _pdfService.GenerateCertificatePdf(certificate);
+
+                // Check if we should send email
+                var studentEmail = certificate.Student?.Email;
+                var parentEmail = certificate.Student?.ParentEmail;
+                var studentName = $"{certificate.Student?.FirstName} {certificate.Student?.LastName}";
+
+                bool emailSent = false;
+                string emailMessage = "";
+
+                if (!string.IsNullOrEmpty(studentEmail) || !string.IsNullOrEmpty(parentEmail))
                 {
-                    certificateNumber = certificate.CertificateNumber,
-                    studentName = $"{certificate.Student?.FirstName} {certificate.Student?.LastName}",
-                    studentCode = certificate.Student?.StudentCode,
-                    gradeName = certificate.Grade?.GradeName,
-                    certificateTitle = certificate.CertificateTitle,
-                    issueDate = certificate.IssueDate.ToString("dd MMMM yyyy"),
-                    issuedBy = certificate.IssuedBy,
-                    signedBy = certificate.SignedBy,
-                    examName = certificate.StudentExamination?.Examination?.ExamName,
-                    examDate = certificate.StudentExamination?.Examination?.ExamDate.ToString("dd MMMM yyyy"),
-                    score = certificate.StudentExamination?.Score,
-                    maxScore = certificate.StudentExamination?.MaxScore
-                };
+                    // Send email
+                    emailSent = await _emailService.SendCertificateEmailAsync(
+                        studentEmail,
+                        parentEmail,
+                        studentName,
+                        pdfBytes,
+                        certificate.CertificateNumber
+                    );
+
+                    emailMessage = emailSent
+                        ? "Certificate sent to email successfully."
+                        : "Certificate generated but email sending failed.";
+                }
+                else
+                {
+                    emailMessage = "No email addresses found. Certificate ready for download only.";
+                }
+
+                // Return PDF for download
+                var fileName = $"Certificate_{certificate.CertificateNumber}.pdf";
 
                 return Json(new
                 {
                     success = true,
-                    message = $"Certificate printed successfully. Print count: {certificate.PrintCount}",
-                    data = certificateData
+                    message = $"Certificate printed successfully. Print count: {certificate.PrintCount}. {emailMessage}",
+                    pdfData = Convert.ToBase64String(pdfBytes),
+                    fileName = fileName,
+                    emailSent = emailSent
                 });
             }
             catch (Exception ex)

@@ -705,7 +705,7 @@
     }
 
     async function printCertificate(certificateId) {
-        if (confirm('Print this certificate? This will increment the print count.')) {
+        if (confirm('Print this certificate? This will increment the print count and send email if addresses are available.')) {
             try {
                 const response = await fetch('@Url.Action("PrintCertificate", "Certificate")', {
                     method: 'POST',
@@ -717,10 +717,27 @@
                 if (result.success) {
                     showAlert(result.message, 'success');
 
-                    // In a real application, you would generate and download PDF here
-                    console.log('Certificate data:', result.data);
+                    // Download PDF
+                    if (result.pdfData) {
+                        const byteCharacters = atob(result.pdfData);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], { type: 'application/pdf' });
 
-                    setTimeout(() => location.reload(), 1500);
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = result.fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }
+
+                    setTimeout(() => location.reload(), 2000);
                 } else {
                     showAlert(result.message, 'error');
                 }

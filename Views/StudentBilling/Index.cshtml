@@ -1,0 +1,1219 @@
+﻿@model IEnumerable<KMSI.Models.StudentBilling>
+@{
+    ViewData["Title"] = "Student Billing";
+    ViewData["Breadcrumb"] = "Student Billing";
+}
+
+<div class="student-billing-management">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Student Billing</h1>
+            <p class="text-muted">Manage student invoices and payments</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success" onclick="openGenerateBillingModal()">
+                <i class="fas fa-plus me-2"></i>Generate Billing
+            </button>
+            <button type="button" class="btn btn-primary" onclick="openBillingModal()">
+                <i class="fas fa-file-invoice me-2"></i>Create Manual Billing
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-0">@Model.Count()</h5>
+                            <small>Total Billings</small>
+                        </div>
+                        <i class="fas fa-file-invoice fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-0">@Model.Count(b => b.Status == "Outstanding")</h5>
+                            <small>Outstanding</small>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-0">@Model.Count(b => b.Status == "Paid")</h5>
+                            <small>Paid</small>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title mb-0">IDR @Model.Where(b => b.Status == "Outstanding").Sum(b => b.TuitionFee + (b.BookFees ?? 0) + (b.OtherFees ?? 0) - (b.Discount ?? 0) + (b.Tax ?? 0)).ToString("N0")</h5>
+                            <small>Outstanding Amount</small>
+                        </div>
+                        <i class="fas fa-money-bill fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Billings Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">Billings List</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex gap-2 align-items-center">
+                        <select id="statusFilter" class="form-select form-select-sm" onchange="filterBillings()">
+                            <option value="">All Status</option>
+                            <option value="Outstanding">Outstanding</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Overdue">Overdue</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <div class="input-group input-group-sm" style="width: 250px;">
+                            <input type="text" class="form-control" id="searchBillings" placeholder="Search billings...">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="billingsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice No.</th>
+                            <th>Student</th>
+                            <th>Grade</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var billing in Model)
+                        {
+                            var totalAmount = billing.TuitionFee + (billing.BookFees ?? 0) + (billing.OtherFees ?? 0) - (billing.Discount ?? 0) + (billing.Tax ?? 0);
+                            var isOverdue = billing.Status == "Outstanding" && billing.DueDate < DateOnly.FromDateTime(DateTime.Today);
+
+                            <tr class="@(isOverdue ? "table-warning" : "")">
+                                <td>
+                                    <div class="fw-semibold text-primary">@billing.BillingNumber</div>
+                                    <small class="text-muted">@billing.Site?.SiteName</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="student-avatar me-2">
+                                            @billing.Student?.FirstName?.Substring(0, 1)@billing.Student?.LastName?.Substring(0, 1)
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@billing.Student?.FirstName @billing.Student?.LastName</div>
+                                            <small class="text-muted">@billing.Student?.StudentCode</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">@billing.Grade?.GradeName</span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">IDR @totalAmount.ToString("N0")</div>
+                                    <small class="text-muted">
+                                        Tuition: @billing.TuitionFee.ToString("N0")
+                                        @if (billing.BookFees > 0 || billing.OtherFees > 0)
+                                        {
+                                            <span> + Fees: @((billing.BookFees ?? 0) + (billing.OtherFees ?? 0)).ToString("N0")</span>
+                                        }
+                                    </small>
+                                </td>
+                                <td>
+                                    <div>@billing.DueDate.ToString("dd/MM/yyyy")</div>
+                                    @if (isOverdue)
+                                    {
+                                        <small class="text-danger">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Overdue
+                                        </small>
+                                    }
+                                </td>
+                                <td>
+                                    @switch (billing.Status)
+                                    {
+                                        case "Outstanding":
+                                            if (isOverdue)
+                                            {
+                                                <span class="badge bg-danger">Overdue</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Outstanding</span>
+                                            }
+                                            break;
+                                        case "Paid":
+                                            <span class="badge bg-success">Paid</span>
+                                            break;
+                                        case "Cancelled":
+                                            <span class="badge bg-secondary">Cancelled</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary">@billing.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (billing.Status == "Paid" && billing.PaymentDate.HasValue)
+                                    {
+                                        <div>
+                                            <small class="text-success">
+                                                <i class="fas fa-check-circle me-1"></i>@billing.PaymentDate.Value.ToString("dd/MM/yyyy")
+                                            </small>
+                                            <br>
+                                            <small class="text-muted">@billing.PaymentMethod</small>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not paid</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="#" onclick="printBilling(@billing.BillingId)">
+                                                    <i class="fas fa-print me-2"></i>Print & Email Invoice
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            @if (billing.Status == "Outstanding")
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item text-success" href="#" onclick="processPayment(@billing.BillingId)">
+                                                        <i class="fas fa-money-bill me-2"></i>Process Payment
+                                                    </a>
+                                                </li>
+                                            }
+                                            <li>
+                                                <a class="dropdown-item" href="#" onclick="editBilling(@billing.BillingId)">
+                                                    <i class="fas fa-edit me-2"></i>Edit
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="#" onclick="viewBilling(@billing.BillingId)">
+                                                    <i class="fas fa-eye me-2"></i>View Details
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            @if (billing.Status == "Outstanding")
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item text-warning" href="#" onclick="changeStatus(@billing.BillingId, 'Cancelled')">
+                                                        <i class="fas fa-times me-2"></i>Cancel
+                                                    </a>
+                                                </li>
+                                            }
+                                            @if (billing.Status != "Paid" && (billing.ReceiptPrintCount ?? 0) <= 3)
+                                            {
+                                                <li>
+                                                    <a class="dropdown-item text-danger" href="#" onclick="deleteBilling(@billing.BillingId, '@billing.BillingNumber')">
+                                                        <i class="fas fa-trash me-2"></i>Delete
+                                                    </a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Billing Modal -->
+<div class="modal fade" id="generateBillingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Generate Billing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="generateBillingForm">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Billing Period -->
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-calendar-alt me-2"></i>Billing Period
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="billingPeriodId" class="form-label">Billing Period <span class="text-danger">*</span></label>
+                            <select class="form-select" id="billingPeriodId" name="billingPeriodId" required>
+                                <option value="">Select Billing Period</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" id="generateForAllActiveStudents" name="generateForAllActiveStudents" checked>
+                                <label class="form-check-label" for="generateForAllActiveStudents">
+                                    Generate for all active students
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-filter me-2"></i>Filters (Optional)
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="generateSiteId" class="form-label">Site Filter</label>
+                            <select class="form-select" id="generateSiteId" name="siteId" onchange="loadActiveStudents()">
+                                <option value="">All Sites</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="generateGradeId" class="form-label">Grade Filter</label>
+                            <select class="form-select" id="generateGradeId" name="gradeId" onchange="loadActiveStudents()">
+                                <option value="">All Grades</option>
+                            </select>
+                        </div>
+
+                        <!-- Student Selection -->
+                        <div class="col-12" id="studentSelectionSection" style="display: none;">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-user-graduate me-2"></i>Select Students
+                            </h6>
+                            <div id="studentsCheckboxList" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Loading students...
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Billing Details -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-money-bill me-2"></i>Billing Details
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="overrideTuitionFee" class="form-label">Override Tuition Fee</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="overrideTuitionFee" name="overrideTuitionFee" step="0.01" placeholder="Leave empty for default">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="generateBookFees" class="form-label">Book Fees</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="generateBookFees" name="bookFees" step="0.01" value="0">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="generateOtherFees" class="form-label">Other Fees</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="generateOtherFees" name="otherFees" step="0.01" value="0">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="generateDiscount" class="form-label">Discount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="generateDiscount" name="discount" step="0.01" value="0">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="generateTax" class="form-label">Tax</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="generateTax" name="tax" step="0.01" value="0">
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="generateNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="generateNotes" name="notes" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Generate Billings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Manual Billing Modal -->
+<div class="modal fade" id="billingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="billingModalTitle">Create Manual Billing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="billingForm">
+                <div class="modal-body">
+                    <input type="hidden" id="billingId" name="billingId" value="0">
+
+                    <div class="row g-3">
+                        <!-- Student Information -->
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-user-graduate me-2"></i>Student Information
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="manualBillingPeriodId" class="form-label">Billing Period <span class="text-danger">*</span></label>
+                            <select class="form-select" id="manualBillingPeriodId" name="billingPeriodId" required>
+                                <option value="">Select Billing Period</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="studentId" class="form-label">Student <span class="text-danger">*</span></label>
+                            <select class="form-select" id="studentId" name="studentId" required>
+                                <option value="">Select Student</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="billingDate" class="form-label">Billing Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="billingDate" name="billingDate" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="dueDate" class="form-label">Due Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="dueDate" name="dueDate" required>
+                        </div>
+
+                        <!-- Billing Amounts -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-money-bill me-2"></i>Billing Amounts
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="tuitionFee" class="form-label">Tuition Fee <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="tuitionFee" name="tuitionFee" step="0.01" required onchange="calculateTotal()">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="bookFees" class="form-label">Book Fees</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="bookFees" name="bookFees" step="0.01" value="0" onchange="calculateTotal()">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="otherFees" class="form-label">Other Fees</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="otherFees" name="otherFees" step="0.01" value="0" onchange="calculateTotal()">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="discount" class="form-label">Discount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="discount" name="discount" step="0.01" value="0" onchange="calculateTotal()">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="tax" class="form-label">Tax</label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="tax" name="tax" step="0.01" value="0" onchange="calculateTotal()">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Amount</h6>
+                                    <h4 class="text-primary mb-0" id="totalAmountDisplay">IDR 0</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="billingNotes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="billingNotes" name="notes" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Billing
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Process Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="paymentForm">
+                <div class="modal-body">
+                    <input type="hidden" id="paymentBillingId" name="billingId">
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <h6 class="mb-2">Invoice Details</h6>
+                                <div id="paymentInvoiceDetails"></div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="paymentDate" class="form-label">Payment Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="paymentDate" name="paymentDate" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="paymentAmount" class="form-label">Payment Amount <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">IDR</span>
+                                <input type="number" class="form-control" id="paymentAmount" name="paymentAmount" step="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="paymentMethod" class="form-label">Payment Method <span class="text-danger">*</span></label>
+                            <select class="form-select" id="paymentMethod" name="paymentMethod" required>
+                                <option value="">Select Method</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="Check">Check</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="paymentReference" class="form-label">Payment Reference</label>
+                            <input type="text" class="form-control" id="paymentReference" name="paymentReference" placeholder="Transaction ID, Check No, etc.">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="paymentNotes" class="form-label">Payment Notes</label>
+                            <textarea class="form-control" id="paymentNotes" name="notes" rows="2" placeholder="Additional notes about this payment"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-money-bill me-2"></i>Process Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Billing Modal -->
+<div class="modal fade" id="viewBillingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Billing Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewBillingContent">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .student-avatar {
+        width: 36px;
+        height: 36px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 12px;
+    }
+
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .card {
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table-warning {
+        background-color: rgba(255, 193, 7, 0.1) !important;
+    }
+
+    .dropdown-menu {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .text-primary {
+        color: var(--primary-color) !important;
+    }
+
+    #studentsCheckboxList .form-check {
+        padding: 0.5rem;
+        margin-bottom: 0.25rem;
+        border-radius: 4px;
+    }
+
+        #studentsCheckboxList .form-check:hover {
+            background-color: var(--gray-100);
+        }
+
+    @@media (max-width: 768px) {
+        .table-responsive
+    {
+        font-size: 0.875rem;
+    }
+
+    .student-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 10px;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.25rem 0.5rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    }
+</style>
+
+<script>
+    let isEditMode = false;
+    let allStudents = [];
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadBillingPeriods();
+        loadSitesAndGrades();
+
+        // Set default dates
+        document.getElementById('billingDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 30);
+        document.getElementById('dueDate').value = tomorrow.toISOString().split('T')[0];
+    });
+
+    // Modal functions
+    function openGenerateBillingModal() {
+        const modal = new bootstrap.Modal(document.getElementById('generateBillingModal'));
+        document.getElementById('generateBillingForm').reset();
+        document.getElementById('generateForAllActiveStudents').checked = true;
+        document.getElementById('studentSelectionSection').style.display = 'none';
+        loadBillingPeriods();
+        loadSitesAndGrades();
+        modal.show();
+    }
+
+    function openBillingModal(billingId = null) {
+        isEditMode = !!billingId;
+        const modal = new bootstrap.Modal(document.getElementById('billingModal'));
+
+        if (isEditMode) {
+            document.getElementById('billingModalTitle').textContent = 'Edit Billing';
+            loadBillingData(billingId);
+        } else {
+            document.getElementById('billingModalTitle').textContent = 'Create Manual Billing';
+            document.getElementById('billingForm').reset();
+            document.getElementById('billingId').value = '0';
+
+            // Set default dates
+            document.getElementById('billingDate').value = new Date().toISOString().split('T')[0];
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+            document.getElementById('dueDate').value = dueDate.toISOString().split('T')[0];
+
+            calculateTotal();
+        }
+
+        loadBillingPeriods('manualBillingPeriodId');
+        loadStudentsForManualBilling();
+        modal.show();
+    }
+
+    function editBilling(billingId) {
+        openBillingModal(billingId);
+    }
+
+    async function viewBilling(billingId) {
+        try {
+            const response = await fetch('@Url.Action("GetBilling", "StudentBilling")?id=' + billingId);
+            const billing = await response.json();
+
+            if (billing) {
+                const content = `
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <strong>Invoice Number:</strong><br>
+                            <span class="text-primary">${billing.billingNumber}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Status:</strong><br>
+                            <span class="badge bg-${billing.status === 'Paid' ? 'success' : billing.status === 'Outstanding' ? 'warning' : 'secondary'}">${billing.status}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Student:</strong><br>
+                            ${billing.studentName} (${billing.studentCode})
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Grade:</strong><br>
+                            ${billing.gradeName}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Billing Date:</strong><br>
+                            ${new Date(billing.billingDate).toLocaleDateString()}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Due Date:</strong><br>
+                            ${new Date(billing.dueDate).toLocaleDateString()}
+                        </div>
+                        <div class="col-12">
+                            <h6 class="text-primary mt-3 mb-2">Amount Details</h6>
+                            <table class="table table-sm">
+                                <tr><td>Tuition Fee</td><td class="text-end">IDR ${billing.tuitionFee.toLocaleString()}</td></tr>
+                                ${billing.bookFees > 0 ? `<tr><td>Book Fees</td><td class="text-end">IDR ${billing.bookFees.toLocaleString()}</td></tr>` : ''}
+                                ${billing.otherFees > 0 ? `<tr><td>Other Fees</td><td class="text-end">IDR ${billing.otherFees.toLocaleString()}</td></tr>` : ''}
+                                ${billing.discount > 0 ? `<tr><td>Discount</td><td class="text-end text-danger">-IDR ${billing.discount.toLocaleString()}</td></tr>` : ''}
+                                ${billing.tax > 0 ? `<tr><td>Tax</td><td class="text-end">IDR ${billing.tax.toLocaleString()}</td></tr>` : ''}
+                                <tr class="table-dark"><td><strong>Total Amount</strong></td><td class="text-end"><strong>IDR ${billing.totalAmount.toLocaleString()}</strong></td></tr>
+                            </table>
+                        </div>
+                        ${billing.paymentDate ? `
+                            <div class="col-12">
+                                <h6 class="text-success mt-3 mb-2">Payment Details</h6>
+                                <div class="row">
+                                    <div class="col-md-6"><strong>Payment Date:</strong><br>${new Date(billing.paymentDate).toLocaleDateString()}</div>
+                                    <div class="col-md-6"><strong>Amount Paid:</strong><br>IDR ${billing.paymentAmount?.toLocaleString() || '0'}</div>
+                                    <div class="col-md-6"><strong>Payment Method:</strong><br>${billing.paymentMethod || '-'}</div>
+                                    <div class="col-md-6"><strong>Reference:</strong><br>${billing.paymentReference || '-'}</div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${billing.notes ? `
+                            <div class="col-12">
+                                <h6 class="text-primary mt-3 mb-2">Notes</h6>
+                                <p class="mb-0">${billing.notes}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                document.getElementById('viewBillingContent').innerHTML = content;
+                const modal = new bootstrap.Modal(document.getElementById('viewBillingModal'));
+                modal.show();
+            }
+        } catch (error) {
+            console.error('Error loading billing details:', error);
+            showAlert('Error loading billing details', 'error');
+        }
+    }
+
+    async function processPayment(billingId) {
+        try {
+            const response = await fetch('@Url.Action("GetBilling", "StudentBilling")?id=' + billingId);
+            const billing = await response.json();
+
+            if (billing) {
+                document.getElementById('paymentBillingId').value = billingId;
+                document.getElementById('paymentAmount').value = billing.totalAmount;
+
+                const detailsHtml = `
+                    <strong>Invoice:</strong> ${billing.billingNumber}<br>
+                    <strong>Student:</strong> ${billing.studentName}<br>
+                    <strong>Total Amount:</strong> IDR ${billing.totalAmount.toLocaleString()}
+                `;
+                document.getElementById('paymentInvoiceDetails').innerHTML = detailsHtml;
+
+                const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                modal.show();
+            }
+        } catch (error) {
+            console.error('Error loading billing for payment:', error);
+            showAlert('Error loading billing details', 'error');
+        }
+    }
+
+    // Load functions
+    async function loadBillingPeriods(selectId = 'billingPeriodId') {
+        try {
+            const response = await fetch('@Url.Action("GetBillingPeriods", "StudentBilling")');
+            const periods = await response.json();
+
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Select Billing Period</option>';
+
+            periods.forEach(period => {
+                const option = document.createElement('option');
+                option.value = period.value;
+                option.textContent = `${period.text} (${new Date(period.startDate).toLocaleDateString()} - ${new Date(period.endDate).toLocaleDateString()})`;
+                option.dataset.status = period.status;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading billing periods:', error);
+        }
+    }
+
+    async function loadSitesAndGrades() {
+        try {
+            const companyId = @User.FindFirst("CompanyId")?.Value ?? 0;
+
+            // Load sites
+            const sitesResponse = await fetch('@Url.Action("GetSitesByCompany", "StudentBilling")?companyId=' + companyId);
+            const sites = await sitesResponse.json();
+
+            const siteSelect = document.getElementById('generateSiteId');
+            siteSelect.innerHTML = '<option value="">All Sites</option>';
+            sites.forEach(site => {
+                const option = document.createElement('option');
+                option.value = site.value;
+                option.textContent = site.text;
+                siteSelect.appendChild(option);
+            });
+
+            // Load grades
+            const gradesResponse = await fetch('@Url.Action("GetGradesByCompany", "StudentBilling")?companyId=' + companyId);
+            const grades = await gradesResponse.json();
+
+            const gradeSelect = document.getElementById('generateGradeId');
+            gradeSelect.innerHTML = '<option value="">All Grades</option>';
+            grades.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade.value;
+                option.textContent = grade.text;
+                gradeSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading sites and grades:', error);
+        }
+    }
+
+    async function loadStudentsForManualBilling() {
+        try {
+            const response = await fetch('@Url.Action("GetActiveStudents", "StudentBilling")');
+            const students = await response.json();
+
+            const select = document.getElementById('studentId');
+            select.innerHTML = '<option value="">Select Student</option>';
+
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.studentId;
+                option.textContent = `${student.studentName} (${student.studentCode}) - ${student.gradeName}`;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading students:', error);
+        }
+    }
+
+    async function loadActiveStudents() {
+        const siteId = document.getElementById('generateSiteId').value;
+        const gradeId = document.getElementById('generateGradeId').value;
+
+        try {
+            let url = '@Url.Action("GetActiveStudents", "StudentBilling")';
+            const params = new URLSearchParams();
+            if (siteId) params.append('siteId', siteId);
+            if (gradeId) params.append('gradeId', gradeId);
+
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            const response = await fetch(url);
+            allStudents = await response.json();
+
+            const container = document.getElementById('studentsCheckboxList');
+            if (allStudents.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">No active students found with selected criteria</div>';
+                return;
+            }
+
+            let html = '<div class="mb-2"><label class="form-check"><input type="checkbox" class="form-check-input" id="selectAllStudents" onchange="toggleAllStudents()"><span class="form-check-label fw-semibold">Select All</span></label></div><hr>';
+
+            allStudents.forEach(student => {
+                html += `
+                    <div class="form-check">
+                        <input class="form-check-input student-checkbox" type="checkbox" name="selectedStudentIds" value="${student.studentId}" id="student_${student.studentId}">
+                        <label class="form-check-label" for="student_${student.studentId}">
+                            <strong>${student.studentName}</strong> (${student.studentCode})<br>
+                            <small class="text-muted">${student.gradeName} - ${student.siteName}</small>
+                        </label>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        } catch (error) {
+            console.error('Error loading students:', error);
+            document.getElementById('studentsCheckboxList').innerHTML = '<div class="text-center text-danger">Error loading students</div>';
+        }
+    }
+
+    async function loadBillingData(billingId) {
+        try {
+            const response = await fetch('@Url.Action("GetBilling", "StudentBilling")?id=' + billingId);
+            const billing = await response.json();
+
+            document.getElementById('billingId').value = billing.billingId;
+            document.getElementById('manualBillingPeriodId').value = billing.billingPeriodId;
+            document.getElementById('studentId').value = billing.studentId;
+            document.getElementById('billingDate').value = billing.billingDate;
+            document.getElementById('dueDate').value = billing.dueDate;
+            document.getElementById('tuitionFee').value = billing.tuitionFee;
+            document.getElementById('bookFees').value = billing.bookFees || 0;
+            document.getElementById('otherFees').value = billing.otherFees || 0;
+            document.getElementById('discount').value = billing.discount || 0;
+            document.getElementById('tax').value = billing.tax || 0;
+            document.getElementById('billingNotes').value = billing.notes || '';
+
+            calculateTotal();
+        } catch (error) {
+            console.error('Error loading billing:', error);
+            showAlert('Error loading billing data', 'error');
+        }
+    }
+
+    // Event handlers
+    document.getElementById('generateForAllActiveStudents').addEventListener('change', function() {
+        const showStudentSelection = !this.checked;
+        document.getElementById('studentSelectionSection').style.display = showStudentSelection ? 'block' : 'none';
+
+        if (showStudentSelection && allStudents.length === 0) {
+            loadActiveStudents();
+        }
+    });
+
+    function toggleAllStudents() {
+        const selectAll = document.getElementById('selectAllStudents');
+        const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+
+        studentCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectAll.checked;
+        });
+    }
+
+    function calculateTotal() {
+        const tuitionFee = parseFloat(document.getElementById('tuitionFee').value) || 0;
+        const bookFees = parseFloat(document.getElementById('bookFees').value) || 0;
+        const otherFees = parseFloat(document.getElementById('otherFees').value) || 0;
+        const discount = parseFloat(document.getElementById('discount').value) || 0;
+        const tax = parseFloat(document.getElementById('tax').value) || 0;
+
+        const total = tuitionFee + bookFees + otherFees - discount + tax;
+        document.getElementById('totalAmountDisplay').textContent = 'IDR ' + total.toLocaleString();
+    }
+
+    // Form submissions
+    document.getElementById('generateBillingForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        // Handle checkbox values
+        formData.set('generateForAllActiveStudents', document.getElementById('generateForAllActiveStudents').checked);
+
+        // Collect selected student IDs if not generating for all
+        if (!document.getElementById('generateForAllActiveStudents').checked) {
+            const selectedStudents = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
+            formData.delete('selectedStudentIds'); // Clear any existing values
+            selectedStudents.forEach(id => formData.append('selectedStudentIds', id));
+        }
+
+        try {
+            const response = await fetch('@Url.Action("GenerateBilling", "StudentBilling")', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(`Generated ${result.generatedCount} billing(s) successfully!`, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('generateBillingModal')).hide();
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error generating billings:', error);
+            showAlert('Error generating billings', 'error');
+        }
+    });
+
+    document.getElementById('billingForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const url = isEditMode ? '@Url.Action("Update", "StudentBilling")' : '@Url.Action("Create", "StudentBilling")';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(result.message, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('billingModal')).hide();
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error saving billing:', error);
+            showAlert('Error saving billing', 'error');
+        }
+    });
+
+    document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        try {
+            const response = await fetch('@Url.Action("ProcessPayment", "StudentBilling")', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(result.message, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error processing payment:', error);
+            showAlert('Error processing payment', 'error');
+        }
+    });
+
+    // Action functions
+    async function printBilling(billingId) {
+        try {
+            const response = await fetch('@Url.Action("PrintBilling", "StudentBilling")?id=' + billingId, {
+                method: 'POST'
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                showAlert(result.message, 'success');
+
+                // Download PDF
+                if (result.pdfData) {
+                    const byteCharacters = atob(result.pdfData);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = result.fileName;
+                    link.click();
+                }
+
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error printing billing:', error);
+            showAlert('Error printing billing', 'error');
+        }
+    }
+
+    async function deleteBilling(billingId, billingNumber) {
+        if (confirm(`Are you sure you want to delete billing "${billingNumber}"?`)) {
+            try {
+                const response = await fetch('@Url.Action("Delete", "StudentBilling")?id=' + billingId, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting billing:', error);
+                showAlert('Error deleting billing', 'error');
+            }
+        }
+    }
+
+    async function changeStatus(billingId, status) {
+        if (confirm(`Are you sure you want to change status to "${status}"?`)) {
+            try {
+                const response = await fetch(`@Url.Action("ChangeStatus", "StudentBilling")?id=${billingId}&status=${status}`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error changing status:', error);
+                showAlert('Error changing status', 'error');
+            }
+        }
+    }
+
+    // Filter and search functions
+    function filterBillings() {
+        const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+        const searchTerm = document.getElementById('searchBillings').value.toLowerCase();
+        const rows = document.querySelectorAll('#billingsTable tbody tr');
+
+        rows.forEach(row => {
+            const statusBadge = row.querySelector('.badge');
+            const rowStatus = statusBadge ? statusBadge.textContent.toLowerCase() : '';
+            const rowText = row.textContent.toLowerCase();
+
+            const matchesStatus = !statusFilter || rowStatus.includes(statusFilter);
+            const matchesSearch = !searchTerm || rowText.includes(searchTerm);
+
+            row.style.display = matchesStatus && matchesSearch ? '' : 'none';
+        });
+    }
+
+    // Search functionality
+    document.getElementById('searchBillings').addEventListener('input', filterBillings);
+
+    // Utility function
+    function showAlert(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+</script>

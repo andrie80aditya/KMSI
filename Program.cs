@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using KMSI.Data;
+using KMSI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,11 @@ builder.Services.AddControllersWithViews();
 // Add Entity Framework
 builder.Services.AddDbContext<KMSIDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Add these lines in Program.cs
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.AddTransient<IPdfService, PdfService>();
+builder.Services.AddTransient<IEmailService, EmailService>();
 
 // Add Authentication & Authorization services
 builder.Services.AddAuthentication("CookieAuth")
