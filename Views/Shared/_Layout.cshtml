@@ -10,13 +10,15 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary-color: #2563eb;
-            --primary-dark: #1d4ed8;
-            --primary-light: #3b82f6;
+            --kmsi-primary: #E53E3E;
+            --kmsi-primary-dark: #C53030;
+            --kmsi-primary-darker: #9B2C2C;
+            --kmsi-primary-light: #FC8181;
+            --kmsi-accent: #FED7D7;
             --secondary-color: #64748b;
             --success-color: #059669;
             --danger-color: #dc2626;
@@ -56,20 +58,21 @@
             color: var(--gray-800);
         }
 
-        /* Sidebar Styles */
+        /* Sidebar Styles - Updated with KMSI Red Theme */
         .sidebar {
             position: fixed;
             top: 0;
             left: 0;
             height: 100vh;
             width: var(--sidebar-width);
-            background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-800) 100%);
+            background: linear-gradient(135deg, var(--kmsi-primary-darker) 0%, var(--kmsi-primary-dark) 50%, var(--kmsi-primary) 100%);
             color: white;
             transition: all 0.3s ease;
             z-index: 1000;
             overflow-y: auto;
             scrollbar-width: thin;
-            scrollbar-color: var(--gray-600) transparent;
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+            box-shadow: var(--shadow-lg);
         }
 
             .sidebar::-webkit-scrollbar {
@@ -81,7 +84,7 @@
             }
 
             .sidebar::-webkit-scrollbar-thumb {
-                background-color: var(--gray-600);
+                background-color: rgba(255, 255, 255, 0.3);
                 border-radius: 3px;
             }
 
@@ -91,29 +94,40 @@
 
         .sidebar-header {
             padding: 1.5rem;
-            border-bottom: 1px solid var(--gray-700);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             display: flex;
             align-items: center;
             gap: 12px;
+            background: rgba(0, 0, 0, 0.1);
         }
 
         .sidebar-logo {
             width: 40px;
             height: 40px;
-            background: var(--primary-color);
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 20px;
             color: white;
+            flex-shrink: 0;
         }
+
+        .kmsi-logo-mini {
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            transition: transform 0.3s ease;
+        }
+
+            .kmsi-logo-mini:hover {
+                transform: scale(1.1);
+            }
 
         .sidebar-title {
             font-size: 1.25rem;
-            font-weight: 700;
+            font-weight: 800;
             white-space: nowrap;
             transition: opacity 0.3s ease;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
         .sidebar.collapsed .sidebar-title {
@@ -132,10 +146,10 @@
         .nav-group-title {
             padding: 0 1.5rem 0.5rem;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--gray-400);
+            letter-spacing: 0.75px;
+            color: rgba(255, 255, 255, 0.6);
             transition: opacity 0.3s ease;
         }
 
@@ -152,22 +166,43 @@
             display: flex;
             align-items: center;
             padding: 0.75rem 1.5rem;
-            color: var(--gray-300);
+            color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             border-left: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
         }
 
+            .nav-link::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), transparent);
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .nav-link:hover::before {
+                transform: translateX(0);
+            }
+
             .nav-link:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.15);
                 color: white;
-                border-left-color: var(--primary-color);
+                border-left-color: white;
+                transform: translateX(4px);
             }
 
             .nav-link.active {
-                background-color: var(--primary-color);
+                background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
                 color: white;
                 border-left-color: white;
+                font-weight: 600;
+                box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
             }
 
         .nav-icon {
@@ -175,6 +210,7 @@
             margin-right: 12px;
             text-align: center;
             font-size: 16px;
+            flex-shrink: 0;
         }
 
         .nav-text {
@@ -190,13 +226,15 @@
 
         .nav-badge {
             margin-left: auto;
-            background-color: var(--danger-color);
-            color: white;
+            background-color: white;
+            color: var(--kmsi-primary);
             font-size: 0.75rem;
+            font-weight: 700;
             padding: 0.25rem 0.5rem;
             border-radius: 12px;
             min-width: 20px;
             text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         /* Main Content */
@@ -242,8 +280,8 @@
         }
 
             .sidebar-toggle:hover {
-                background-color: var(--gray-100);
-                color: var(--gray-800);
+                background-color: var(--kmsi-accent);
+                color: var(--kmsi-primary);
             }
 
         .breadcrumb {
@@ -261,6 +299,16 @@
                 color: var(--gray-800);
                 font-weight: 500;
             }
+
+            .breadcrumb-item a {
+                color: var(--kmsi-primary);
+                text-decoration: none;
+                transition: color 0.2s ease;
+            }
+
+                .breadcrumb-item a:hover {
+                    color: var(--kmsi-primary-dark);
+                }
 
         .header-right {
             display: flex;
@@ -285,13 +333,13 @@
         }
 
             .user-menu-toggle:hover {
-                background-color: var(--gray-100);
+                background-color: var(--kmsi-accent);
             }
 
         .user-avatar {
             width: 36px;
             height: 36px;
-            background: var(--primary-color);
+            background: var(--kmsi-primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -299,6 +347,7 @@
             color: white;
             font-weight: 600;
             font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .user-info {
@@ -313,7 +362,8 @@
 
         .user-role {
             font-size: 0.75rem;
-            color: var(--gray-500);
+            color: var(--kmsi-primary);
+            font-weight: 500;
         }
 
         .content {
@@ -348,7 +398,6 @@
         /* Responsive Design */
         @@media (max-width: 768px) {
             .sidebar
-
         {
             transform: translateX(-100%);
         }
@@ -388,12 +437,29 @@
 
         @@media (max-width: 768px) {
             .sidebar-overlay.active
-
         {
             display: block;
         }
 
         }
+
+        /* Enhanced dropdown styling */
+        .dropdown-menu {
+            border: none;
+            box-shadow: var(--shadow-lg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .dropdown-item {
+            padding: 0.75rem 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+            .dropdown-item:hover {
+                background-color: var(--kmsi-accent);
+                color: var(--kmsi-primary);
+            }
     </style>
 </head>
 <body>
@@ -401,7 +467,24 @@
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo">
-                <i class="fas fa-music"></i>
+                <svg class="kmsi-logo-mini" width="40" height="40" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Background -->
+                    <rect width="80" height="80" rx="8" fill="white" fill-opacity="0.9" />
+
+                    <!-- KAWAI logo elements -->
+                    <g transform="translate(12, 12)">
+                        <!-- Main circular elements -->
+                        <circle cx="18" cy="24" r="10" fill="none" stroke="#E53E3E" stroke-width="3" />
+                        <circle cx="38" cy="24" r="8" fill="#E53E3E" />
+
+                        <!-- Connecting curved line -->
+                        <path d="M 28 24 Q 33 18 38 24" fill="none" stroke="#E53E3E" stroke-width="3" stroke-linecap="round" />
+
+                        <!-- Text elements -->
+                        <text x="28" y="42" text-anchor="middle" fill="#E53E3E" font-family="Arial, sans-serif" font-size="5" font-weight="bold">KAWAI</text>
+                        <text x="28" y="50" text-anchor="middle" fill="#E53E3E" font-family="Arial, sans-serif" font-size="3">MUSIC SCHOOL</text>
+                    </g>
+                </svg>
             </div>
             <div class="sidebar-title">KMSI Apps</div>
         </div>

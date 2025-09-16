@@ -7,11 +7,30 @@
     <div class="login-card">
         <div class="login-header">
             <div class="logo-section">
-                <div class="logo-icon">
-                    <i class="fas fa-music"></i>
+                <div class="logo-container">
+                    <svg class="kmsi-logo" width="80" height="80" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Background circle -->
+                        <rect width="200" height="200" rx="20" fill="#E53E3E" />
+
+                        <!-- KAWAI logo elements -->
+                        <g transform="translate(30, 30)">
+                            <!-- Main circular elements -->
+                            <circle cx="45" cy="60" r="25" fill="none" stroke="white" stroke-width="8" />
+                            <circle cx="95" cy="60" r="20" fill="white" />
+
+                            <!-- Connecting curved line -->
+                            <path d="M 70 60 Q 85 45 95 60" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" />
+
+                            <!-- Text elements -->
+                            <text x="70" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">KAWAI</text>
+                            <text x="70" y="125" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="8">MUSIC SCHOOL</text>
+                            <text x="70" y="138" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="6">Since 1956</text>
+                        </g>
+                    </svg>
                 </div>
                 <h1 class="app-title">KMSI Apps</h1>
                 <p class="app-subtitle">Kawai Music School Indonesia</p>
+                <p class="app-tagline">personality & harmony</p>
             </div>
         </div>
 
@@ -58,6 +77,101 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Override background gradient to match KMSI red theme */
+    body {
+        background: linear-gradient(135deg, #E53E3E 0%, #C53030 50%, #9B2C2C 100%);
+    }
+
+    /* Update header background to match */
+    .login-header {
+        background: linear-gradient(135deg, #E53E3E 0%, #C53030 100%);
+    }
+
+    /* Logo container styling */
+    .logo-container {
+        margin-bottom: 1.5rem;
+    }
+
+    .kmsi-logo {
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        transition: transform 0.3s ease;
+    }
+
+        .kmsi-logo:hover {
+            transform: scale(1.05);
+        }
+
+    /* Enhanced app title styling */
+    .app-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.025em;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .app-subtitle {
+        font-size: 1rem;
+        opacity: 0.95;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+
+    .app-tagline {
+        font-size: 0.75rem;
+        opacity: 0.8;
+        font-style: italic;
+        font-weight: 300;
+        margin: 0;
+    }
+
+    /* Update button to match red theme */
+    .btn-primary {
+        background: linear-gradient(135deg, #E53E3E 0%, #C53030 100%);
+        border: 2px solid transparent;
+    }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #C53030 0%, #9B2C2C 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(229, 62, 62, 0.3);
+        }
+
+    /* Update focus colors to match theme */
+    .form-control:focus {
+        border-color: #E53E3E;
+        box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15);
+    }
+
+    .password-toggle:hover {
+        color: #E53E3E;
+    }
+
+    /* Enhanced card styling */
+    .login-card {
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Mobile responsiveness */
+    @@media (max-width: 480px) {
+        .kmsi-logo
+    {
+        width: 64px;
+        height: 64px;
+    }
+
+    .app-title {
+        font-size: 1.75rem;
+    }
+
+    .app-subtitle {
+        font-size: 0.875rem;
+    }
+
+    }
+</style>
 
 <script>
     function togglePassword() {
